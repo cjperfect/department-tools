@@ -2,6 +2,7 @@ import { useState } from 'react'
 import {
   Search,
   Trash2,
+  RefreshCw,
   Star,
   ShoppingCart,
   Store,
@@ -29,8 +30,13 @@ import { Input } from '@/components/ui/input'
 import { Separator } from '@/components/ui/separator'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ConfirmDialog } from '@/components/confirm-dialog'
-import { analysisData } from '../data/mock'
 import { analyzeProduct, type ProductAnalysis } from '@/api/bidding'
+
+const SAMPLE_URLS = [
+  { url: 'https://item.taobao.com/item.htm?id=694593508978', name: '金运A5蓝牙耳机' },
+  { url: 'https://item.taobao.com/item.htm?id=975382453065', name: 'iPhone 17 Pro Max' },
+  { url: 'https://item.jd.com/100012345678.html', name: '索尼 WH-1000XM6' },
+]
 
 const DIMENSIONS = [
   { key: 'design', label: '设计', icon: Palette },
@@ -61,13 +67,18 @@ export function ProductParser() {
     setSearchQuery(searchInput.trim())
   }
 
-  const handleAnalyze = async () => {
-    if (!url.trim()) return
+  const handleAnalyze = async (analyzeUrl?: string) => {
+    const targetUrl = (analyzeUrl ?? url).trim()
+    if (!targetUrl) return
     setLoading(true)
 
     try {
-      const record = await analyzeProduct(url.trim())
-      setRecords((prev) => [record, ...prev])
+      const record = await analyzeProduct(targetUrl)
+      setRecords((prev) => {
+        // 刷新：替换旧记录；新分析：插入顶部
+        const filtered = prev.filter((r) => r.id !== record.id)
+        return [record, ...filtered]
+      })
       setUrl('')
       toast.success(`已完成「${record.name}」竞品分析`)
     } catch {
@@ -98,7 +109,7 @@ export function ProductParser() {
             className='pl-9 font-mono text-sm'
           />
         </div>
-        <Button onClick={handleAnalyze} disabled={loading}>
+        <Button onClick={() => handleAnalyze()} disabled={loading}>
           {loading ? (
             <Loader2 className='mr-1 size-4 animate-spin' />
           ) : (
@@ -110,18 +121,13 @@ export function ProductParser() {
       {(
         <div className='mt-3 flex gap-2 text-xs text-muted-foreground'>
           <span>示例：</span>
-          {Object.keys(analysisData)
-            .slice(0, 3)
-            .map((u) => (
+          {SAMPLE_URLS.map((s) => (
               <button
-                key={u}
+                key={s.url}
                 className='max-w-64 truncate rounded bg-muted px-2 py-0.5 hover:bg-muted/70'
-                onClick={() => {
-                  setUrl(u)
-                  handleAnalyze()
-                }}
+                onClick={() => setUrl(s.url)}
               >
-                {analysisData[u].name}
+                {s.name}
               </button>
             ))}
         </div>
@@ -179,6 +185,7 @@ export function ProductParser() {
           key={record.id}
           record={record}
           onDelete={() => setDeleteId(record.id)}
+          onRefresh={() => handleAnalyze(record.url)}
         />
       ))}
 
@@ -223,9 +230,11 @@ function getDimScore(record: ProductAnalysis, key: string): number {
 function AnalysisCard({
   record,
   onDelete,
+  onRefresh,
 }: {
   record: ProductAnalysis
   onDelete: () => void
+  onRefresh: () => void
 }) {
   const avgScore = (
     (record.design.score +
@@ -270,14 +279,26 @@ function AnalysisCard({
               </CardDescription>
             </div>
           </div>
-          <Button
-            variant='ghost'
-            size='icon'
-            className='shrink-0 text-red-500 hover:bg-red-50 hover:text-red-600'
-            onClick={onDelete}
-          >
-            <Trash2 className='size-4' />
-          </Button>
+          <div className='flex shrink-0 items-center gap-1'>
+            <Button
+              variant='ghost'
+              size='icon'
+              className='text-muted-foreground hover:text-blue-600'
+              onClick={onRefresh}
+              title='重新分析'
+            >
+              <RefreshCw className='size-4' />
+            </Button>
+            <Button
+              variant='ghost'
+              size='icon'
+              className='text-red-500 hover:bg-red-50 hover:text-red-600'
+              onClick={onDelete}
+              title='删除'
+            >
+              <Trash2 className='size-4' />
+            </Button>
+          </div>
         </div>
       </CardHeader>
 
