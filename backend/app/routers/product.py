@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
-from app.schemas.product import AnalyzeRequest
+from app.schemas.bidding import AnalyzeRequest
 from app.schemas.response import error, success
 from app.services.product_analyzer import (
     ProductAnalyzer,

@@ -177,6 +177,22 @@ class PriceMonitorService:
 
     @staticmethod
     def _extract_price(raw: dict) -> float:
+        """提取价格。淘宝 API 返回分，需 /100。"""
+        # 淘宝折扣价 (分)
+        if (val := raw.get("DiscountPrice")) is not None:
+            try:
+                p = float(val)
+                return p / 100 if p > 1000 else p
+            except (TypeError, ValueError):
+                pass
+        # 淘宝原价 (分)
+        if (val := raw.get("itemPrice")) is not None:
+            try:
+                p = float(val)
+                return p / 100 if p > 1000 else p
+            except (TypeError, ValueError):
+                pass
+        # 通用字段
         for key in ("price", "current_price", "sale_price", "item_price"):
             if (val := raw.get(key)) is not None:
                 try:

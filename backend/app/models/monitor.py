@@ -16,12 +16,12 @@ class PriceMonitor(Base):
     # ------------------------------------------------------------------
     # 主键
     # ------------------------------------------------------------------
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True, comment="主键")
 
     # ------------------------------------------------------------------
     # 商品信息
     # ------------------------------------------------------------------
-    url: Mapped[str] = mapped_column(String(2048), nullable=False, comment="商品链接")
+    url: Mapped[str] = mapped_column(String(768), nullable=False, comment="商品链接")
     platform: Mapped[str] = mapped_column(String(32), nullable=False, comment="平台")
     product_name: Mapped[str] = mapped_column(String(512), nullable=False, comment="商品名称")
     sku: Mapped[str] = mapped_column(String(128), default="", comment="SKU 编码")
