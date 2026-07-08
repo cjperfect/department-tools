@@ -72,6 +72,29 @@ Request:  { username: str, password: str, role?: str }
 Response: { code: 0, data: { id, username, role, is_active, created_at } }
 ```
 
+#### `GET /api/auth/menu`
+
+```
+Headers:  Authorization: Bearer <token>
+Response: { code: 0, data: { nav: [...] } }
+```
+
+根据用户角色返回侧边栏菜单，结构：
+
+```json
+{
+  "nav": [
+    { "title": "首页", "url": "/", "icon": "LayoutDashboard" },
+    { "title": "竞品分析", "url": "/bidding", "icon": "BarChart3" },
+    { "title": "价格监控", "url": "/price/monitor", "icon": "Eye" },
+    { "title": "用户管理", "url": "/users", "icon": "Users", "roles": ["admin"] }
+  ]
+}
+```
+
+- 普通用户不返回 `roles: ["admin"]` 的菜单项
+- icon 使用 lucide-react 图标名称，前端动态渲染
+
 #### `GET /api/auth/users`（仅 admin）
 
 列出所有用户。
@@ -150,9 +173,11 @@ interface AuthState {
   token: string | null
   user: User | null
   isAuthenticated: boolean
+  menu: NavItem[]           // 后端返回的侧边栏菜单
   login: (username: string, password: string) => Promise<void>
   logout: () => void
-  hydrate: () => void  // 从 localStorage 恢复
+  fetchMenu: () => Promise<void>
+  hydrate: () => void       // 从 localStorage 恢复
 }
 ```
 
@@ -170,13 +195,22 @@ interface AuthState {
 - 请求拦截器：从 store 读取 token，附加 `Authorization: Bearer <token>`
 - 响应拦截器：401 → 清除 token → 跳转 `/sign-in`
 
-### 3.5 侧边栏用户区域
+### 3.5 侧边栏菜单
+
+由后端 `GET /api/auth/menu` 动态返回，替换静态 `sidebar-data.ts`。
+
+- 登录后调用 `/api/auth/menu` 获取菜单
+- 存入 auth store（Zustand）
+- AppSidebar 从 store 读取菜单渲染
+- 普通用户看不到用户管理（后端不返回该菜单项）
+
+### 3.6 侧边栏用户区域
 
 AppSidebar footer 区域：
 - 显示当前用户名 + 角色
 - 退出按钮（调用 `logout()`）
 
-### 3.6 用户管理页（仅 admin）
+### 3.7 用户管理页（仅 admin）
 
 路径：`/users`
 
@@ -184,7 +218,7 @@ AppSidebar footer 区域：
 - 新建用户按钮 → 弹窗表单（用户名、密码、角色）
 - 仅 `role === 'admin'` 可见导航项和路由
 
-### 3.7 路由规划
+### 3.8 路由规划
 
 ```
 /sign-in          → SignIn 页面（无布局）
@@ -197,20 +231,20 @@ AppSidebar footer 区域：
   /users          → 用户管理（需 admin）
 ```
 
-### 3.8 文件清单
+### 3.9 文件清单
 
 | 文件 | 操作 | 说明 |
 |------|------|------|
 | `src/features/auth/pages/SignIn.tsx` | 新增 | 登录页 |
 | `src/features/auth/pages/Users.tsx` | 新增 | 用户管理页 |
 | `src/features/auth/components/UserAuthForm.tsx` | 新增 | 登录表单组件 |
-| `src/stores/auth-store.ts` | 新增 | Zustand 认证状态 |
-| `src/api/auth.ts` | 新增 | 认证 API 函数 |
+| `src/stores/auth-store.ts` | 新增 | Zustand 认证状态（含菜单） |
+| `src/api/auth.ts` | 新增 | 认证 API + 菜单 API |
 | `src/api/client.ts` | 修改 | token 拦截 + 401 处理 |
 | `src/routes/_authenticated/route.tsx` | 修改 | 路由守卫 |
 | `src/routes/__root.tsx` | 修改 | 注册 sign-in 路由 |
-| `src/components/layout/app-sidebar.tsx` | 修改 | 用户信息 + 退出 |
-| `src/components/layout/data/sidebar-data.ts` | 修改 | 加用户管理导航 |
+| `src/components/layout/app-sidebar.tsx` | 修改 | 从 store 读菜单 + 用户信息 |
+| `src/components/layout/data/sidebar-data.ts` | 删除 | 替换为后端菜单 |
 
 ---
 
