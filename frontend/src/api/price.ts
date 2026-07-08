@@ -11,6 +11,7 @@ export interface MonitorItem {
   name: string
   sku: string
   platform: string
+  platforms: string[]
   currentPrice: number
   targetPrice: number
   diff: number
@@ -43,11 +44,11 @@ export interface HistoryItem {
 
 let _monitorId = 100
 const FALLBACK_MONITORS: MonitorItem[] = [
-  { id: _monitorId++, name: '金运A5蓝牙耳机', sku: '694593508978', platform: '淘宝', currentPrice: 94.00, targetPrice: 80.00, diff: -14.00, status: '监控中' },
-  { id: _monitorId++, name: 'Apple/苹果 iPhone 17 Pro Max', sku: '975382453065', platform: '淘宝', currentPrice: 9999.00, targetPrice: 9500.00, diff: -499.00, status: '已触发' },
-  { id: _monitorId++, name: '索尼 WH-1000XM6', sku: '100012345678', platform: '京东', currentPrice: 2099.00, targetPrice: 2200.00, diff: 101.00, status: '监控中' },
-  { id: _monitorId++, name: '苹果 MacBook Pro 14 M3 Pro', sku: '67890123456', platform: '天猫', currentPrice: 14999.00, targetPrice: 14000.00, diff: -999.00, status: '监控中' },
-  { id: _monitorId++, name: '小米 14 Ultra 骁龙8Gen3', sku: '100055566677', platform: '京东', currentPrice: 4299.00, targetPrice: 4000.00, diff: -299.00, status: '已触发' },
+  { id: _monitorId++, name: '金运A5蓝牙耳机', sku: '694593508978', platform: '淘宝', platforms: ['淘宝', '京东', '拼多多'], currentPrice: 94.00, targetPrice: 80.00, diff: -14.00, status: '监控中' },
+  { id: _monitorId++, name: 'Apple/苹果 iPhone 17 Pro Max', sku: '975382453065', platform: '淘宝', platforms: ['淘宝', '天猫', '京东'], currentPrice: 9999.00, targetPrice: 9500.00, diff: -499.00, status: '已触发' },
+  { id: _monitorId++, name: '索尼 WH-1000XM6', sku: '100012345678', platform: '京东', platforms: ['京东', '天猫'], currentPrice: 2099.00, targetPrice: 2200.00, diff: 101.00, status: '监控中' },
+  { id: _monitorId++, name: '苹果 MacBook Pro 14 M3 Pro', sku: '67890123456', platform: '天猫', platforms: ['天猫', '京东', '拼多多', '抖音'], currentPrice: 14999.00, targetPrice: 14000.00, diff: -999.00, status: '监控中' },
+  { id: _monitorId++, name: '小米 14 Ultra 骁龙8Gen3', sku: '100055566677', platform: '京东', platforms: ['京东', '淘宝', '拼多多'], currentPrice: 4299.00, targetPrice: 4000.00, diff: -299.00, status: '已触发' },
 ]
 
 const FALLBACK_COMPARISON: Record<string, ComparisonItem> = {
@@ -80,6 +81,7 @@ export async function getMonitorList(): Promise<MonitorItem[]> {
 export async function addMonitor(params: {
   url: string
   targetPrice: number
+  platforms: string[]
 }): Promise<MonitorItem> {
   try {
     const { data } = await apiClient.post('/api/price/monitor', params)
@@ -89,7 +91,8 @@ export async function addMonitor(params: {
       id: _monitorId++,
       name: '新监控商品',
       sku: '',
-      platform: '未知',
+      platform: params.platforms[0] || '未知',
+      platforms: params.platforms,
       currentPrice: 0,
       targetPrice: params.targetPrice,
       diff: -params.targetPrice,

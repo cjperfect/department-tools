@@ -38,6 +38,14 @@ const SAMPLE_URLS = [
   { url: 'https://item.jd.com/100012345678.html', name: '索尼 WH-1000XM6' },
 ]
 
+const PLATFORM_COLORS: Record<string, string> = {
+  '京东': 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+  '淘宝': 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
+  '天猫': 'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400',
+  '拼多多': 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400',
+  '抖音': 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400',
+}
+
 const DIMENSIONS = [
   { key: 'design', label: '设计', icon: Palette },
   { key: 'pricing', label: '定价', icon: Wallet },
@@ -263,7 +271,7 @@ function AnalysisCard({
             <div className='min-w-0'>
               <CardTitle className='text-base'>{record.name}</CardTitle>
               <CardDescription className='mt-0.5 flex items-center gap-2 text-xs'>
-                <Badge variant='secondary' className='text-xs'>
+                <Badge className={`text-xs ${PLATFORM_COLORS[record.platform] || ''}`}>
                   {record.platform}
                 </Badge>
                 <Store className='size-3' /> {record.shopName}

@@ -22,6 +22,19 @@ import {
 } from '@/api/price'
 import { toast } from 'sonner'
 
+const PLATFORM_COLORS: Record<string, string> = {
+  '京东': 'bg-red-100 text-red-700 hover:bg-red-100 dark:bg-red-900/30 dark:text-red-400',
+  '淘宝': 'bg-orange-100 text-orange-700 hover:bg-orange-100 dark:bg-orange-900/30 dark:text-orange-400',
+  '天猫': 'bg-violet-100 text-violet-700 hover:bg-violet-100 dark:bg-violet-900/30 dark:text-violet-400',
+  '拼多多': 'bg-rose-100 text-rose-700 hover:bg-rose-100 dark:bg-rose-900/30 dark:text-rose-400',
+  '抖音': 'bg-cyan-100 text-cyan-700 hover:bg-cyan-100 dark:bg-cyan-900/30 dark:text-cyan-400',
+  '苏宁': 'bg-blue-100 text-blue-700 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400',
+}
+
+function platformColor(platform: string) {
+  return PLATFORM_COLORS[platform] || 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400'
+}
+
 export function MonitorTable() {
   const [items, setItems] = useState<MonitorItem[]>([])
   const [loading, setLoading] = useState(true)
@@ -50,6 +63,7 @@ export function MonitorTable() {
       const newItem = await addMonitor({
         url: formData.url,
         targetPrice: formData.targetPrice,
+        platforms: formData.platforms,
       })
       setItems((prev) => [newItem, ...prev])
       toast.success(`已添加「${newItem.name}」监控`)
@@ -103,7 +117,11 @@ export function MonitorTable() {
                   <TableRow key={item.id}>
                     <TableCell className='font-medium'>{item.name}</TableCell>
                     <TableCell>
-                      <Badge variant='secondary'>{item.platform}</Badge>
+                      <div className='flex flex-wrap gap-1'>
+                        {(item.platforms?.length ? item.platforms : [item.platform]).map((p) => (
+                          <Badge key={p} className={platformColor(p)}>{p}</Badge>
+                        ))}
+                      </div>
                     </TableCell>
                     <TableCell>¥{item.currentPrice.toLocaleString()}</TableCell>
                     <TableCell>¥{item.targetPrice.toLocaleString()}</TableCell>
