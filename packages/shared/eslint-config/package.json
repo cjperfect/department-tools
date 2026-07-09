@@ -1,0 +1,15 @@
+{
+  "name": "@department-tools/eslint-config",
+  "version": "1.0.0",
+  "private": true,
+  "main": "./index.js",
+  "peerDependencies": {
+    "@eslint/js": "^9.0.0",
+    "eslint": "^9.0.0",
+    "typescript-eslint": "^8.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@eslint/js": { "optional": false },
+    "typescript-eslint": { "optional": false }
+  }
+}

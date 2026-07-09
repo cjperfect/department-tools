@@ -1,0 +1,158 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                  Int       @id @default(autoincrement())
+  username            String    @unique @db.VarChar(50)
+  employee_id         String?   @unique @db.VarChar(50)
+  department_id       Int?
+  role_id             Int
+  password_hash       String    @db.VarChar(255)
+  must_change_password Boolean   @default(true)
+  status              String    @default("active") @db.VarChar(20)
+  is_delete           Boolean   @default(false)
+  created_at          DateTime  @default(now())
+  updated_at          DateTime  @updatedAt
+
+  department Department? @relation(fields: [department_id], references: [id])
+  role       Role        @relation(fields: [role_id], references: [id])
+  analyses   Analysis[]
+  monitorProducts MonitorProduct[]
+
+  @@map("users")
+}
+
+model Analysis {
+  id               Int      @id @default(autoincrement())
+  user_id          Int
+  url              String   @db.VarChar(768)
+  platform         String   @db.VarChar(32)
+  name             String   @db.VarChar(512)
+  image            String   @default("📦") @db.VarChar(8)
+  shop_name        String   @default("") @db.VarChar(256)
+  category         String   @default("") @db.VarChar(256)
+  current_price    Float
+  original_price   Float?
+  monthly_sales    Int      @default(0)
+  rating           Float    @default(0)
+  reviews          Int      @default(0)
+  highlights       Json?
+  warnings         Json?
+  gap_opportunities Json?
+  analyzed_at      DateTime @default(now())
+  created_at       DateTime @default(now())
+
+  user       User                @relation(fields: [user_id], references: [id])
+  dimensions AnalysisDimension[]
+  raw_data   RawData?
+
+  @@map("analyses")
+}
+
+model AnalysisDimension {
+  id             Int      @id @default(autoincrement())
+  analysis_id    Int
+  dimension_type String   @db.VarChar(20)
+  score          Float    @default(0)
+  detail         Json     @default("{}")
+  created_at     DateTime @default(now())
+
+  analysis Analysis @relation(fields: [analysis_id], references: [id], onDelete: Cascade)
+
+  @@map("analysis_dimensions")
+}
+
+model RawData {
+  id          Int      @id @default(autoincrement())
+  analysis_id Int      @unique
+  data        Json
+  created_at  DateTime @default(now())
+
+  analysis Analysis @relation(fields: [analysis_id], references: [id], onDelete: Cascade)
+
+  @@map("raw_data")
+}
+
+model MonitorProduct {
+  id         Int      @id @default(autoincrement())
+  user_id    Int
+  name       String   @db.VarChar(512)
+  image      String   @default("📦") @db.VarChar(8)
+  created_at DateTime @default(now())
+
+  user  User          @relation(fields: [user_id], references: [id])
+  items MonitorItem[]
+
+  @@map("monitor_products")
+}
+
+model MonitorItem {
+  id            Int      @id @default(autoincrement())
+  product_id    Int
+  platform      String   @db.VarChar(32)
+  url           String   @db.VarChar(768)
+  current_price Float
+  target_price  Float
+  diff          Float    @default(0)
+  status        Int      @default(0)
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+
+  product MonitorProduct @relation(fields: [product_id], references: [id], onDelete: Cascade)
+
+  @@map("monitor_items")
+}
+
+model Role {
+  id         Int      @id @default(autoincrement())
+  name       String   @unique @db.VarChar(20)
+  created_at DateTime @default(now())
+
+  users User[]
+
+  @@map("roles")
+}
+
+model Department {
+  id         Int      @id @default(autoincrement())
+  name       String   @unique @db.VarChar(100)
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  users User[]
+
+  @@map("departments")
+}
+
+model MenuGroup {
+  id         Int      @id @default(autoincrement())
+  name       String   @unique @db.VarChar(50)
+  sort_order Int      @default(0)
+  created_at DateTime @default(now())
+
+  menus Menu[]
+
+  @@map("menu_groups")
+}
+
+model Menu {
+  id         Int      @id @default(autoincrement())
+  group_id   Int
+  title      String   @db.VarChar(100)
+  url        String   @db.VarChar(255)
+  icon       String   @db.VarChar(50)
+  sort_order Int      @default(0)
+  roles      Json     @default("[]")
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  group MenuGroup  @relation(fields: [group_id], references: [id])
+
+  @@map("menus")
+}

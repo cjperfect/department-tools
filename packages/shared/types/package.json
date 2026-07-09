@@ -1,0 +1,24 @@
+{
+  "name": "@department-tools/types",
+  "version": "1.0.0",
+  "private": true,
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./api": "./src/api.ts",
+    "./auth": "./src/auth.ts",
+    "./bidding": "./src/bidding.ts",
+    "./price": "./src/price.ts",
+    "./constants": "./src/constants.ts"
+  },
+  "typesVersions": {
+    "*": {
+      "api": ["./src/api.ts"],
+      "auth": ["./src/auth.ts"],
+      "bidding": ["./src/bidding.ts"],
+      "price": ["./src/price.ts"],
+      "constants": ["./src/constants.ts"]
+    }
+  }
+}

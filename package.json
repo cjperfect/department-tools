@@ -1,0 +1,24 @@
+{
+  "name": "department-tools",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm --parallel -r dev",
+    "dev:frontend": "pnpm --filter @department-tools/frontend dev",
+    "dev:backend": "pnpm --filter @department-tools/backend start:dev",
+    "build": "pnpm -r build",
+    "build:frontend": "pnpm --filter @department-tools/frontend build",
+    "build:backend": "pnpm --filter @department-tools/backend build",
+    "seed": "pnpm --filter @department-tools/backend seed",
+    "lint": "pnpm -r lint",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "devDependencies": {
+    "prettier": "^3.8.3",
+    "@trivago/prettier-plugin-sort-imports": "^6.0.2",
+    "prettier-plugin-tailwindcss": "^0.7.2"
+  }
+}
