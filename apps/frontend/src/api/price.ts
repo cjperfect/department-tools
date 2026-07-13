@@ -43,7 +43,7 @@ export async function getMonitorStats(): Promise<MonitorStats> {
 
 export type { MonitorItem, MonitorProduct, MonitorStats, SearchResult }
 
-export async function searchCompare(keyword: string): Promise<SearchResult[]> {
-  const { data } = await apiClient.get('/api/price/search', { params: { q: keyword } })
+export async function searchCompare(productId: number): Promise<SearchResult[]> {
+  const { data } = await apiClient.get(`/api/price/search/${productId}`)
   return data as SearchResult[]
 }

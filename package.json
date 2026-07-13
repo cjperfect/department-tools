@@ -1,6 +1,7 @@
 {
   "name": "department-tools",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "pnpm --parallel -r dev",
     "dev:frontend": "pnpm --filter @department-tools/frontend dev",
@@ -19,6 +20,9 @@
   "devDependencies": {
     "prettier": "^3.8.3",
     "@trivago/prettier-plugin-sort-imports": "^6.0.2",
-    "prettier-plugin-tailwindcss": "^0.7.2"
+    "prettier-plugin-tailwindcss": "^0.7.2",
+    "eslint": "^10.2.1",
+    "@eslint/js": "^10.0.1",
+    "typescript-eslint": "^8.58.2"
   }
 }

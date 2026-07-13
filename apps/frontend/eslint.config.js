@@ -1,4 +1,4 @@
-import baseConfig from '@department-tools/eslint-config'
+import baseConfig from '../../eslint.config.base.js'
 import globals from 'globals'
 import pluginQuery from '@tanstack/eslint-plugin-query'
 import reactHooks from 'eslint-plugin-react-hooks'

@@ -29,7 +29,6 @@
     "rxjs": "^7.8.1"
   },
   "devDependencies": {
-    "@department-tools/tsconfig": "workspace:*",
     "@nestjs/cli": "^10.4.0",
     "@nestjs/schematics": "^10.1.0",
     "@types/bcryptjs": "^2.4.6",

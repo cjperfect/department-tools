@@ -68,12 +68,12 @@ export class PriceController {
     return this.priceService.refreshItem(itemId);
   }
 
-  @Get('search')
+  @Get('search/:productId')
   async searchCompare(
     @CurrentUser() user: any,
-    @Query('q') q?: string,
+    @Param('productId', ParseIntPipe) productId: number,
   ) {
-    return this.priceService.searchCompare(user.id, q || '');
+    return this.priceService.searchCompare(user.id, productId);
   }
 
   @Get('history/:itemId')

@@ -43,15 +43,15 @@ export function MonitorList({ products, setProducts, loading }: Props) {
   const [deleteInfo, setDeleteInfo] = useState<{ productId?: number; itemId?: number; label?: string } | null>(null)
 
   // 比价搜索
-  const [searchKeyword, setSearchKeyword] = useState('')
+  const [searchProduct, setSearchProduct] = useState<{ id: number; name: string } | null>(null)
   const [searchSheet, setSearchSheet] = useState(false)
   const [searchResults, setSearchResults] = useState<SearchResult[]>([])
 
-  const handleSearch = async (keyword: string) => {
-    setSearchKeyword(keyword)
+  const handleSearch = async (productId: number, productName: string) => {
+    setSearchProduct({ id: productId, name: productName })
     setSearchSheet(true)
     try {
-      const results = await searchCompare(keyword)
+      const results = await searchCompare(productId)
       setSearchResults(results)
     } catch {
       setSearchResults([])
@@ -134,7 +134,7 @@ export function MonitorList({ products, setProducts, loading }: Props) {
                   onDeleteProduct={() => setDeleteInfo({ productId: product.id, label: product.name })}
                   onDeleteItem={(itemId, label) => setDeleteInfo({ itemId, label })}
                   onRefreshItem={(itemId) => handleRefreshItem(itemId)}
-                  onSearch={() => handleSearch(product.name)}
+                  onSearch={() => handleSearch(product.id, product.name)}
                 />
               ))}
             </div>
@@ -159,7 +159,7 @@ export function MonitorList({ products, setProducts, loading }: Props) {
       <Sheet open={searchSheet} onOpenChange={setSearchSheet}>
         <SheetContent side='right' className='w-100 sm:w-120'>
           <SheetHeader>
-            <SheetTitle>比价「{searchKeyword}」</SheetTitle>
+            <SheetTitle>比价「{searchProduct?.name || ''}」</SheetTitle>
           </SheetHeader>
           <ScrollArea className='h-[calc(100vh-120px)] mt-4'>
             <div className='space-y-6 px-4'>
@@ -250,7 +250,7 @@ function ProductCard({
   onDeleteProduct: () => void
   onDeleteItem: (id: number, label: string) => void
   onRefreshItem: (id: number) => void
-  onSearch: () => void
+  onSearch: (id: number, name: string) => void
 }) {
   const triggeredCount = product.items.filter((it) => it.status === 1).length
 

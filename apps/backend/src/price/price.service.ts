@@ -186,27 +186,25 @@ export class PriceService {
     };
   }
 
-  async searchCompare(userId: number, keyword: string) {
-    if (!keyword.trim()) {
+  async searchCompare(userId: number, productId: number) {
+    const product = await this.prisma.monitorProduct.findFirst({
+      where: { id: productId, user_id: userId },
+      include: {
+        items: {
+          orderBy: { current_price: 'asc' },
+        },
+      },
+    });
+
+    if (!product) {
       return { code: 0, message: 'ok', data: [] };
     }
 
-    const items = await this.prisma.monitorItem.findMany({
-      where: {
-        product: {
-          name: { contains: keyword.trim() },
-          user_id: userId,
-        },
-      },
-      include: { product: true },
-      orderBy: { current_price: 'asc' },
-    });
-
     const grouped: Record<string, any[]> = {};
-    for (const it of items) {
+    for (const it of product.items) {
       if (!grouped[it.platform]) grouped[it.platform] = [];
       grouped[it.platform].push({
-        name: it.product.name,
+        name: product.name,
         price: it.current_price,
         shop: it.platform,
         url: it.url || '',
