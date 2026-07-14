@@ -215,6 +215,9 @@ const FALLBACK: Record<string, ProductAnalysis> = {
 export async function analyzeProduct(url: string): Promise<ProductAnalysis> {
   try {
     const { data } = await apiClient.post('/api/bidding/analyze', { url })
+    if (!data) {
+      throw new Error('未找到该商品，请检查链接')
+    }
     return data as ProductAnalysis
   } catch {
     // 后端不可用时走兜底

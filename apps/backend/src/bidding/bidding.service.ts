@@ -38,13 +38,13 @@ export class BiddingService {
 
   async analyze(url: string, userId: number) {
     const parsed = parseProductUrl(url);
-    if (!parsed) throw new NotFoundException('未找到该商品');
-    if (!parsed.isSupported) throw new BadRequestException(`暂不支持${parsed.platform}平台`);
+    if (!parsed) return { code: 0, message: '未找到该商品', data: null };
+    if (!parsed.isSupported) return { code: 0, message: '未找到该商品', data: null };
 
-    if (!this.justone.isAvailable) throw new NotFoundException('API 服务不可用');
+    if (!this.justone.isAvailable) return { code: 0, message: '未找到该商品', data: null };
 
     const raw = await this.justone.getProductDetail(parsed.platform, parsed.productId);
-    if (!raw) throw new NotFoundException('未找到该商品');
+    if (!raw) return { code: 0, message: '未找到该商品', data: null };
 
     const rawComments = await this.justone.getProductComments(parsed.platform, parsed.productId);
     const rawPrice = await this.justone.getProductPrice(parsed.platform, parsed.productId);

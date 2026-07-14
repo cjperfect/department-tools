@@ -191,7 +191,7 @@ export function ProductParser() {
       {filtered.map((record) => (
         <AnalysisCard
           key={record.id}
-          record={record}
+          record={normalizeRecord(record)}
           onDelete={() => setDeleteId(record.id)}
           onRefresh={() => handleAnalyze(record.url)}
         />
@@ -225,14 +225,27 @@ const scoreColor = (s: number) =>
   s >= 8 ? 'text-green-600' : s >= 6 ? 'text-yellow-600' : 'text-red-600'
 
 function getDimScore(record: ProductAnalysis, key: string): number {
-  const map: Record<string, number> = {
-    design: record.design.score,
-    pricing: record.pricing.score,
-    functionality: record.functionality.score,
-    quality: record.quality.score,
-    service: record.service.score,
+  const dim = record[key as keyof ProductAnalysis]
+  if (!dim || typeof dim !== 'object' || !('score' in dim)) return 0
+  return (dim as { score: number }).score
+}
+
+/** 确保所有字段都有兜底值，避免接口数据缺失时报错 */
+function normalizeRecord(r: ProductAnalysis): ProductAnalysis {
+  const EMPTY_DIM = { score: 0, highlights: [], warnings: [] }
+  return {
+    ...r,
+    currentPrice: r.currentPrice ?? 0,
+    originalPrice: r.originalPrice ?? 0,
+    monthlySales: r.monthlySales ?? 0,
+    rating: r.rating ?? 0,
+    reviews: r.reviews ?? 0,
+    design: { ...EMPTY_DIM, packaging: '', colorOptions: [], sizeOptions: [], userLikes: [], userHates: [], gapOpportunities: [], ...(r.design || {}) },
+    pricing: { ...EMPTY_DIM, competitorPrice: 0, ourPrice: 0, hasFreeTrial: false, hasInstallment: false, plans: [], pricingGaps: [], ...(r.pricing || {}) },
+    functionality: { ...EMPTY_DIM, solves: [], gaps: [], painPoints: [], ...(r.functionality || {}) },
+    quality: { ...EMPTY_DIM, easeOfUse: '', durability: '', qualityIssues: [], userFeedback: { positive: [], negative: [] }, ...(r.quality || {}) },
+    service: { ...EMPTY_DIM, responseStyle: '', avgResponseTime: '', commonComplaints: [], serviceLikes: [], ...(r.service || {}) },
   }
-  return map[key] ?? 0
 }
 
 function AnalysisCard({
@@ -245,18 +258,17 @@ function AnalysisCard({
   onRefresh: () => void
 }) {
   const avgScore = (
-    (record.design.score +
-      record.pricing.score +
-      record.functionality.score +
-      record.quality.score +
-      record.service.score) /
-    5
+    ((record.design as any)?.score ?? 0) +
+    ((record.pricing as any)?.score ?? 0) +
+    ((record.functionality as any)?.score ?? 0) +
+    ((record.quality as any)?.score ?? 0) +
+    ((record.service as any)?.score ?? 0)
   ).toFixed(1)
 
   const topGaps = [
-    ...record.design.gapOpportunities.slice(0, 2),
-    ...record.functionality.gaps.slice(0, 1),
-    ...record.pricing.pricingGaps.slice(0, 2),
+    ...((record.design as any)?.gapOpportunities ?? []).slice(0, 2),
+    ...((record.functionality as any)?.gaps ?? []).slice(0, 1),
+    ...((record.pricing as any)?.pricingGaps ?? []).slice(0, 2),
   ].slice(0, 5)
 
   return (
