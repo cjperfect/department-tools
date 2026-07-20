@@ -24,7 +24,7 @@ export function PriceMonitor() {
   return (
     <>
       <Header fixed>
-        <PageHeader title='价格监控' description='监控商品价格变动，自动触发降价提醒' />
+        <PageHeader title='价格监控' description='监控商品价格变动' />
       </Header>
       <Main>
         <div className='space-y-4'>

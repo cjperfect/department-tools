@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ExternalLink, Plus, RefreshCw, Search, Trash2 } from 'lucide-react'
+import { ExternalLink, Loader2, Plus, RefreshCw, Search, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -46,15 +46,19 @@ export function MonitorList({ products, setProducts, loading }: Props) {
   const [searchProduct, setSearchProduct] = useState<{ id: number; name: string } | null>(null)
   const [searchSheet, setSearchSheet] = useState(false)
   const [searchResults, setSearchResults] = useState<SearchResult[]>([])
+  const [searchLoading, setSearchLoading] = useState<number | null>(null)
 
   const handleSearch = async (productId: number, productName: string) => {
     setSearchProduct({ id: productId, name: productName })
-    setSearchSheet(true)
+    setSearchLoading(productId)
     try {
       const results = await searchCompare(productId)
       setSearchResults(results)
+      setSearchSheet(true)
     } catch {
-      setSearchResults([])
+      toast.error('比价查询失败')
+    } finally {
+      setSearchLoading(null)
     }
   }
 
@@ -135,6 +139,7 @@ export function MonitorList({ products, setProducts, loading }: Props) {
                   onDeleteItem={(itemId, label) => setDeleteInfo({ itemId, label })}
                   onRefreshItem={(itemId) => handleRefreshItem(itemId)}
                   onSearch={() => handleSearch(product.id, product.name)}
+                  searchLoading={searchLoading}
                 />
               ))}
             </div>
@@ -245,12 +250,14 @@ function ProductCard({
   onDeleteItem,
   onRefreshItem,
   onSearch,
+  searchLoading,
 }: {
   product: MonitorProduct
   onDeleteProduct: () => void
   onDeleteItem: (id: number, label: string) => void
   onRefreshItem: (id: number) => void
   onSearch: (id: number, name: string) => void
+  searchLoading: number | null
 }) {
   const triggeredCount = product.items.filter((it) => it.status === 1).length
 
@@ -272,8 +279,18 @@ function ProductCard({
           </div>
         </div>
         <div className='flex items-center gap-1'>
-          <Button variant='outline' size='sm' onClick={onSearch} className='h-7 text-xs gap-1'>
-            <Search className='size-3' strokeWidth={2.5} />
+          <Button
+            variant='outline'
+            size='sm'
+            onClick={onSearch}
+            className='h-7 text-xs gap-1'
+            disabled={searchLoading === product.id}
+          >
+            {searchLoading === product.id ? (
+              <Loader2 className='size-3 animate-spin' strokeWidth={2.5} />
+            ) : (
+              <Search className='size-3' strokeWidth={2.5} />
+            )}
             比价
           </Button>
           <Tooltip>

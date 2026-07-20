@@ -17,15 +17,6 @@ pnpm dev                  # 前后端同时启动
 pnpm dev:frontend         # Vite 开发服务器 (5173 端口)
 pnpm dev:backend          # NestJS 开发服务器 (8000 端口)
 
-# 构建 & 检查
-pnpm build                # 构建所有包
-pnpm lint                 # lint 所有包
-pnpm format               # prettier 格式化
-
-# 指定单个包执行
-pnpm --filter @department-tools/frontend <命令>
-pnpm --filter @department-tools/backend <命令>
-
 # 数据库操作（在 apps/backend/ 下执行）
 cd apps/backend
 npx prisma generate       # 修改 schema 后重新生成客户端

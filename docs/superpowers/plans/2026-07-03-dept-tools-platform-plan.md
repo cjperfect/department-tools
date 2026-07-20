@@ -104,11 +104,13 @@ src/
 ### Task 1: 克隆模板并清理依赖
 
 **Files:**
+
 - Modify: `package.json`
 - Delete: `src/assets/clerk-logo.tsx`
 - Delete: `src/stores/auth-store.ts`
 
 **Interfaces:**
+
 - Consumes: nothing (project init)
 - Produces: A clean project base ready for feature work
 
@@ -157,9 +159,11 @@ git commit -m "chore: clone shadcn-admin, remove Clerk auth dependency"
 ### Task 2: 清理 main.tsx 中的认证逻辑
 
 **Files:**
+
 - Modify: `src/main.tsx`
 
 **Interfaces:**
+
 - Consumes: Clean project from Task 1
 - Produces: `main.tsx` without auth store, 401 handling, or axios error redirects
 
@@ -281,10 +285,12 @@ git commit -m "refactor: remove auth store and 401 redirect logic from main.tsx"
 ### Task 3: 替换侧边栏导航菜单
 
 **Files:**
+
 - Modify: `src/components/layout/data/sidebar-data.ts`
 - Modify: `src/components/layout/app-sidebar.tsx`
 
 **Interfaces:**
+
 - Consumes: Clean project from Tasks 1-2
 - Produces: Sidebar showing 部门业务工具 with bidding + price nav groups
 
@@ -446,6 +452,7 @@ git commit -m "feat: replace sidebar nav with bidding and price monitoring menus
 ### Task 4: 创建路由结构
 
 **Files:**
+
 - Create: `src/routes/_authenticated/bidding/report.tsx`
 - Create: `src/routes/_authenticated/bidding/keyword.tsx`
 - Create: `src/routes/_authenticated/price/monitor.tsx`
@@ -455,6 +462,7 @@ git commit -m "feat: replace sidebar nav with bidding and price monitoring menus
 - Delete: `src/routes/_authenticated/dashboard/`, `tasks/`, `apps/`, `chats/`, `users/`, `settings/`, `help-center/`, `errors/` subdirectories
 
 **Interfaces:**
+
 - Consumes: Sidebar with correct URLs from Task 3
 - Produces: Working routes that render placeholder pages, demo pages removed
 
@@ -588,12 +596,14 @@ git commit -m "feat: add route structure for bidding and price modules"
 ### Task 5: 创建共享组件
 
 **Files:**
+
 - Create: `src/components/StatCard.tsx`
 - Create: `src/components/ChartCard.tsx`
 - Create: `src/components/PageHeader.tsx`
 - Create: `src/components/StatusBadge.tsx`
 
 **Interfaces:**
+
 - Consumes: Clean project structure from Tasks 1-4
 - Produces: `StatCard`, `ChartCard`, `PageHeader`, `StatusBadge` — reusable across all pages
 
@@ -757,6 +767,7 @@ git commit -m "feat: add shared components StatCard, ChartCard, PageHeader, Stat
 ### Task 6: 实现竞价分析 — Mock 数据 + 数据报表页
 
 **Files:**
+
 - Create: `src/features/bidding/data/mock.ts`
 - Create: `src/features/bidding/components/StatCards.tsx`
 - Create: `src/features/bidding/components/BiddingTrendChart.tsx`
@@ -764,6 +775,7 @@ git commit -m "feat: add shared components StatCard, ChartCard, PageHeader, Stat
 - Create: `src/features/bidding/pages/BiddingReport.tsx`
 
 **Interfaces:**
+
 - Consumes: `StatCard`, `ChartCard`, `PageHeader` from Task 5, `StatusBadge` from Task 5
 - Produces: Working bidding report page with charts and data table
 
@@ -1042,10 +1054,12 @@ git commit -m "feat: implement bidding report page with charts and data table"
 ### Task 7: 实现竞价分析 — 关键词查询页
 
 **Files:**
+
 - Create: `src/features/bidding/components/KeywordTable.tsx`
 - Create: `src/features/bidding/pages/KeywordQuery.tsx`
 
 **Interfaces:**
+
 - Consumes: `PageHeader`, `StatusBadge` from Task 5, mock data from Task 6
 - Produces: Working keyword search page
 
@@ -1205,6 +1219,7 @@ git commit -m "feat: implement keyword query page with search and results table"
 ### Task 8: 实现价格检测 — Mock 数据 + 价格监控页
 
 **Files:**
+
 - Create: `src/features/price/data/mock.ts`
 - Create: `src/features/price/components/StatCards.tsx`
 - Create: `src/features/price/components/MonitorTable.tsx`
@@ -1212,6 +1227,7 @@ git commit -m "feat: implement keyword query page with search and results table"
 - Create: `src/features/price/pages/PriceMonitor.tsx`
 
 **Interfaces:**
+
 - Consumes: `StatCard`, `StatusBadge`, `PageHeader` from Task 5
 - Produces: Working price monitor page with CRUD-like UI
 
@@ -1537,7 +1553,7 @@ export function PriceMonitor() {
   return (
     <>
       <Header fixed>
-        <PageHeader title='价格监控' description='监控商品价格变动，自动触发降价提醒' />
+        <PageHeader title='价格监控' description='监控商品价格变动' />
       </Header>
       <Main>
         <div className='space-y-4'>
@@ -1566,11 +1582,13 @@ git commit -m "feat: implement price monitor page with add/delete and stat cards
 ### Task 9: 实现价格检测 — 平台比价页
 
 **Files:**
+
 - Create: `src/features/price/components/ComparisonChart.tsx`
 - Create: `src/features/price/pages/PlatformCompare.tsx`
 - Modify: `src/features/price/data/mock.ts`
 
 **Interfaces:**
+
 - Consumes: `ChartCard`, `PageHeader` from Task 5
 - Produces: Working cross-platform comparison page
 
@@ -1800,11 +1818,13 @@ git commit -m "feat: implement platform price comparison page with bar chart"
 ### Task 10: 实现价格检测 — 价格走势页
 
 **Files:**
+
 - Create: `src/features/price/components/HistoryChart.tsx`
 - Create: `src/features/price/pages/PriceTrend.tsx`
 - Modify: `src/features/price/data/mock.ts`
 
 **Interfaces:**
+
 - Consumes: `ChartCard`, `PageHeader` from Task 5
 - Produces: Working price history trend page
 
@@ -1994,6 +2014,7 @@ git commit -m "feat: implement price trend page with history line chart"
 ### Task 11: 清理 Demo 功能文件
 
 **Files:**
+
 - Delete: `src/features/dashboard/`
 - Delete: `src/features/tasks/`
 - Delete: `src/features/apps/`
@@ -2006,6 +2027,7 @@ git commit -m "feat: implement price trend page with history line chart"
 - Delete: `src/components/sign-out-dialog.tsx`
 
 **Interfaces:**
+
 - Consumes: All features implemented from Tasks 1-10
 - Produces: A clean project without unused demo code
 
@@ -2093,9 +2115,11 @@ git commit -m "chore: remove demo features and auth-related components"
 ### Task 12: 最终验证与收尾
 
 **Files:**
+
 - Modify: `package.json` — 更新项目名称
 
 **Interfaces:**
+
 - Consumes: Complete platform from Tasks 1-11
 - Produces: Final verified deployable platform
 
@@ -2110,15 +2134,15 @@ cd /Users/chenjiang/Desktop/department-tools/frontend
 
 启动开发服务器 `pnpm dev`，逐页检查：
 
-| 页面 | 检查点 |
-|------|--------|
-| `/bidding/report` | 4个统计卡片 + 折线图 + 饼图 + 表格 |
-| `/bidding/keyword` | 搜索框输入"耳机"→ 显示蓝牙耳机结果 |
-| `/price/monitor` | 3个统计卡片 + 监控列表 + 添加/删除 |
-| `/price/compare` | 商品选择器 + 柱状图 + 价格明细表 |
-| `/price/trend` | 商品选择器 + 7/30/90天切换 + 折线图 + 参考线 |
-| 侧边栏 | 折叠/展开 + 主题切换 + 导航跳转 |
-| `/` | 重定向到 `/bidding/report` |
+| 页面               | 检查点                                       |
+| ------------------ | -------------------------------------------- |
+| `/bidding/report`  | 4个统计卡片 + 折线图 + 饼图 + 表格           |
+| `/bidding/keyword` | 搜索框输入"耳机"→ 显示蓝牙耳机结果           |
+| `/price/monitor`   | 3个统计卡片 + 监控列表 + 添加/删除           |
+| `/price/compare`   | 商品选择器 + 柱状图 + 价格明细表             |
+| `/price/trend`     | 商品选择器 + 7/30/90天切换 + 折线图 + 参考线 |
+| 侧边栏             | 折叠/展开 + 主题切换 + 导航跳转              |
+| `/`                | 重定向到 `/bidding/report`                   |
 
 - [ ] **Step 3: 修复验证中发现的问题**
 
