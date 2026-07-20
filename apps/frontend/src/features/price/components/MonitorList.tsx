@@ -47,6 +47,7 @@ export function MonitorList({ products, setProducts, loading }: Props) {
   const [searchSheet, setSearchSheet] = useState(false)
   const [searchResults, setSearchResults] = useState<SearchResult[]>([])
   const [searchLoading, setSearchLoading] = useState<number | null>(null)
+  const [refreshLoading, setRefreshLoading] = useState<number | null>(null)
 
   const handleSearch = async (productId: number, productName: string) => {
     setSearchProduct({ id: productId, name: productName })
@@ -89,6 +90,41 @@ export function MonitorList({ products, setProducts, loading }: Props) {
       toast.success('价格已刷新')
     } catch {
       toast.error('刷新失败')
+    }
+  }
+
+  const handleRefreshProduct = async (productId: number) => {
+    const product = products.find((p) => p.id === productId)
+    if (!product) return
+    setRefreshLoading(productId)
+    try {
+      const results = await Promise.allSettled(
+        product.items.map((it) => refreshItem(it.id))
+      )
+      setProducts((prev) =>
+        prev.map((p) => {
+          if (p.id !== productId) return p
+          return {
+            ...p,
+            items: p.items.map((it, i) => {
+              const result = results[i]
+              if (result.status === 'fulfilled') {
+                return { ...it, ...result.value }
+              }
+              return it
+            }),
+          }
+        })
+      )
+      const succeeded = results.filter((r) => r.status === 'fulfilled').length
+      const failed = results.filter((r) => r.status === 'rejected').length
+      if (failed === 0) {
+        toast.success(`已刷新「${product.name}」全部 ${succeeded} 条价格`)
+      } else {
+        toast.warning(`刷新完成：${succeeded} 条成功，${failed} 条失败`)
+      }
+    } finally {
+      setRefreshLoading(null)
     }
   }
 
@@ -138,8 +174,10 @@ export function MonitorList({ products, setProducts, loading }: Props) {
                   onDeleteProduct={() => setDeleteInfo({ productId: product.id, label: product.name })}
                   onDeleteItem={(itemId, label) => setDeleteInfo({ itemId, label })}
                   onRefreshItem={(itemId) => handleRefreshItem(itemId)}
+                  onRefreshProduct={() => handleRefreshProduct(product.id)}
                   onSearch={() => handleSearch(product.id, product.name)}
                   searchLoading={searchLoading}
+                  refreshLoading={refreshLoading}
                 />
               ))}
             </div>
@@ -162,19 +200,21 @@ export function MonitorList({ products, setProducts, loading }: Props) {
 
       {/* 快速比价抽屉 */}
       <Sheet open={searchSheet} onOpenChange={setSearchSheet}>
-        <SheetContent side='right' className='w-100 sm:w-120'>
+        <SheetContent side='right' className='w-[95vw] sm:max-w-[900px]'>
           <SheetHeader>
             <SheetTitle>比价「{searchProduct?.name || ''}」</SheetTitle>
           </SheetHeader>
           <ScrollArea className='h-[calc(100vh-120px)] mt-4'>
-            <div className='space-y-6 px-4'>
+            <div className='px-4'>
               {searchResults.length === 0 ? (
                 <p className='text-sm text-muted-foreground text-center py-8'>搜索中...</p>
               ) : (
-                searchResults.map(({ platform, items }) => {
-                  const cheapest = items.reduce((a, b) => a.price < b.price ? a : b)
-                  return <PlatformResults key={platform} platform={platform} results={items} cheapest={cheapest} />
-                })
+                <div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
+                  {searchResults.map(({ platform, items }) => {
+                    const cheapest = items.reduce((a, b) => a.price < b.price ? a : b)
+                    return <PlatformResults key={platform} platform={platform} results={items} cheapest={cheapest} />
+                  })}
+                </div>
               )}
             </div>
           </ScrollArea>
@@ -249,15 +289,19 @@ function ProductCard({
   onDeleteProduct,
   onDeleteItem,
   onRefreshItem,
+  onRefreshProduct,
   onSearch,
   searchLoading,
+  refreshLoading,
 }: {
   product: MonitorProduct
   onDeleteProduct: () => void
   onDeleteItem: (id: number, label: string) => void
   onRefreshItem: (id: number) => void
-  onSearch: (id: number, name: string) => void
+  onRefreshProduct: () => void
+  onSearch: () => void
   searchLoading: number | null
+  refreshLoading: number | null
 }) {
   const triggeredCount = product.items.filter((it) => it.status === 1).length
 
@@ -279,20 +323,44 @@ function ProductCard({
           </div>
         </div>
         <div className='flex items-center gap-1'>
-          <Button
-            variant='outline'
-            size='sm'
-            onClick={onSearch}
-            className='h-7 text-xs gap-1'
-            disabled={searchLoading === product.id}
-          >
-            {searchLoading === product.id ? (
-              <Loader2 className='size-3 animate-spin' strokeWidth={2.5} />
-            ) : (
-              <Search className='size-3' strokeWidth={2.5} />
-            )}
-            比价
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant='outline'
+                size='sm'
+                onClick={onRefreshProduct}
+                className='h-7 text-xs gap-1'
+                disabled={refreshLoading === product.id}
+              >
+                {refreshLoading === product.id ? (
+                  <Loader2 className='size-3 animate-spin' strokeWidth={2.5} />
+                ) : (
+                  <RefreshCw className='size-3' strokeWidth={2.5} />
+                )}
+                批量刷新
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent className='font-bold'>刷新全部平台价格</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant='outline'
+                size='sm'
+                onClick={onSearch}
+                className='h-7 text-xs gap-1'
+                disabled={searchLoading === product.id}
+              >
+                {searchLoading === product.id ? (
+                  <Loader2 className='size-3 animate-spin' strokeWidth={2.5} />
+                ) : (
+                  <Search className='size-3' strokeWidth={2.5} />
+                )}
+                比价
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent className='font-bold'>跨平台搜索比价</TooltipContent>
+          </Tooltip>
           <Tooltip>
           <TooltipTrigger asChild>
             <Button variant='ghost' size='icon'

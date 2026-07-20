@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   Search,
   Trash2,
@@ -30,7 +30,12 @@ import { Input } from '@/components/ui/input'
 import { Separator } from '@/components/ui/separator'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ConfirmDialog } from '@/components/confirm-dialog'
-import { analyzeProduct, type ProductAnalysis } from '@/api/bidding'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
+import { analyzeProduct, searchRecords, deleteRecord, type ProductAnalysis } from '@/api/bidding'
 
 const SAMPLE_URLS = [
   { url: 'https://item.taobao.com/item.htm?id=694593508978', name: '金运A5蓝牙耳机' },
@@ -59,20 +64,43 @@ export function ProductParser() {
   const [records, setRecords] = useState<ProductAnalysis[]>([])
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [searchInput, setSearchInput] = useState('')
-  const [searchQuery, setSearchQuery] = useState('')
   const [loading, setLoading] = useState(false)
+  const [fetching, setFetching] = useState(true)
+  const [searching, setSearching] = useState(false)
 
-  const filtered = searchQuery.trim()
-    ? records.filter(
-        (r) =>
-          r.name.includes(searchQuery.trim()) ||
-          r.platform.includes(searchQuery.trim()) ||
-          r.shopName.includes(searchQuery.trim())
-      )
-    : records
+  // 页面加载时从后端获取历史分析记录
+  const loadAllRecords = () => {
+    setSearching(true)
+    searchRecords('')
+      .then(setRecords)
+      .catch(() => {})
+      .finally(() => {
+        setSearching(false)
+        setFetching(false)
+      })
+  }
 
-  const handleSearchRecords = () => {
-    setSearchQuery(searchInput.trim())
+  useEffect(() => {
+    loadAllRecords()
+  }, [])
+
+  const handleSearchRecords = async () => {
+    const q = searchInput.trim()
+    if (!q) return
+    setSearching(true)
+    try {
+      const results = await searchRecords(q)
+      setRecords(results)
+    } catch {
+      toast.error('搜索失败')
+    } finally {
+      setSearching(false)
+    }
+  }
+
+  const handleClearSearch = () => {
+    setSearchInput('')
+    loadAllRecords()
   }
 
   const handleAnalyze = async (analyzeUrl?: string) => {
@@ -96,10 +124,16 @@ export function ProductParser() {
     }
   }
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!deleteId) return
-    setRecords((prev) => prev.filter((r) => r.id !== deleteId))
+    const id = deleteId
     setDeleteId(null)
+    try {
+      await deleteRecord(id)
+    } catch {
+      // 后端删除失败也清除前端记录
+    }
+    setRecords((prev) => prev.filter((r) => r.id !== id))
     toast.success('已移除分析记录')
   }
 
@@ -142,7 +176,12 @@ export function ProductParser() {
       )}
 
       {/* History Records */}
-      {records.length === 0 && (
+      {fetching ? (
+        <div className='flex flex-col items-center justify-center py-16 text-muted-foreground'>
+          <Loader2 className='mb-4 size-8 animate-spin opacity-20' />
+          <p className='text-sm'>加载历史记录...</p>
+        </div>
+      ) : records.length === 0 ? (
         <div className='flex flex-col items-center justify-center py-16 text-muted-foreground'>
           <ShoppingCart className='mb-4 size-16 opacity-20' />
           <p className='text-lg font-medium'>粘贴竞品链接开始分析</p>
@@ -150,7 +189,7 @@ export function ProductParser() {
             支持京东、天猫、拼多多链接，点击上方示例快速体验
           </p>
         </div>
-      )}
+      ) : null}
 
       {records.length > 0 && (
         <div className='flex max-w-md gap-2 ml-auto'>
@@ -164,31 +203,26 @@ export function ProductParser() {
               className='pl-9'
             />
           </div>
-          <Button onClick={handleSearchRecords}>
-            <Search className='mr-1 size-4' />
+          <Button onClick={handleSearchRecords} disabled={searching}>
+            {searching ? (
+              <Loader2 className='mr-1 size-4 animate-spin' />
+            ) : (
+              <Search className='mr-1 size-4' />
+            )}
             搜索
           </Button>
-          {searchQuery && (
-            <Button
-              variant='outline'
-              onClick={() => {
-                setSearchInput('')
-                setSearchQuery('')
-              }}
-            >
-              <Trash2 className='mr-1 size-4' />
-              清除
-            </Button>
-          )}
+          <Button
+            variant='outline'
+            onClick={handleClearSearch}
+            disabled={searching}
+          >
+            <Trash2 className='mr-1 size-4' />
+            清除
+          </Button>
         </div>
       )}
 
-      {filtered.length === 0 && records.length > 0 && (
-        <div className='flex flex-col items-center justify-center py-12 text-muted-foreground'>
-          <p>未找到匹配「{searchQuery}」的分析记录</p>
-        </div>
-      )}
-      {filtered.map((record) => (
+      {records.map((record) => (
         <AnalysisCard
           key={record.id}
           record={normalizeRecord(record)}
@@ -300,24 +334,32 @@ function AnalysisCard({
             </div>
           </div>
           <div className='flex shrink-0 items-center gap-1'>
-            <Button
-              variant='ghost'
-              size='icon'
-              className='text-muted-foreground hover:text-blue-600'
-              onClick={onRefresh}
-              title='重新分析'
-            >
-              <RefreshCw className='size-4' />
-            </Button>
-            <Button
-              variant='ghost'
-              size='icon'
-              className='text-red-500 hover:bg-red-50 hover:text-red-600'
-              onClick={onDelete}
-              title='删除'
-            >
-              <Trash2 className='size-4' />
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant='ghost'
+                  size='icon'
+                  className='text-muted-foreground hover:text-blue-600'
+                  onClick={onRefresh}
+                >
+                  <RefreshCw className='size-4' />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent className='font-bold'>重新分析</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant='ghost'
+                  size='icon'
+                  className='text-red-500 hover:bg-red-50 hover:text-red-600'
+                  onClick={onDelete}
+                >
+                  <Trash2 className='size-4' />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent className='font-bold'>删除记录</TooltipContent>
+            </Tooltip>
           </div>
         </div>
       </CardHeader>
