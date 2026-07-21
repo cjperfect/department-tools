@@ -83,7 +83,7 @@ model MonitorProduct {
   id         Int      @id @default(autoincrement())
   user_id    Int
   name       String   @db.VarChar(512)
-  image      String   @default("📦") @db.VarChar(8)
+  image      String   @default("📦") @db.VarChar(768)
   created_at DateTime @default(now())
 
   user  User          @relation(fields: [user_id], references: [id])

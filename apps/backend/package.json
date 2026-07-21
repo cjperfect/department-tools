@@ -8,8 +8,9 @@
     "start": "nest start",
     "start:dev": "nest start --watch",
     "start:prod": "node dist/main",
-    "seed": "ts-node seed.ts",
-    "db:push": "prisma db push --accept-data-loss"
+    "db:seed": "ts-node seed.ts",
+    "db:migrate": "npx prisma migrate dev",
+    "db:push": "npx prisma db push"
   },
   "dependencies": {
     "@department-tools/types": "workspace:*",

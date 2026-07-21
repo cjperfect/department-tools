@@ -1,6 +1,5 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { JustOneService } from '../justone/justone.service';
 import { parseProductUrl } from '../justone/url-parser';
 
 const DIMENSION_TYPES = ['design', 'pricing', 'functionality', 'quality', 'service'];
@@ -33,7 +32,6 @@ const EMPTY_DETAIL: Record<string, any> = {
 export class BiddingService {
   constructor(
     private prisma: PrismaService,
-    private justone: JustOneService,
   ) {}
 
   async analyze(url: string, userId: number) {
@@ -41,63 +39,41 @@ export class BiddingService {
     if (!parsed) return { code: 0, message: '未找到该商品', data: null };
     if (!parsed.isSupported) return { code: 0, message: '未找到该商品', data: null };
 
-    if (!this.justone.isAvailable) return { code: 0, message: '未找到该商品', data: null };
-
-    const raw = await this.justone.getProductDetail(parsed.platform, parsed.productId);
-    if (!raw) return { code: 0, message: '未找到该商品', data: null };
-
-    const rawComments = await this.justone.getProductComments(parsed.platform, parsed.productId);
-    const rawPrice = await this.justone.getProductPrice(parsed.platform, parsed.productId);
-
-    const ctx = { raw: raw || {}, comments: rawComments || {} };
-    const currentPrice = this.extractPrice(ctx);
-    const originalPrice = this.extractOriginalPrice(ctx);
-
     const analysis = await this.prisma.analysis.create({
       data: {
         user_id: userId,
         url,
         platform: parsed.platform,
-        name: this.extractName(ctx),
-        image: this.guessIcon(ctx),
-        shop_name: this.extractShopName(ctx),
-        category: this.extractCategory(ctx),
-        current_price: currentPrice,
-        original_price: originalPrice !== currentPrice ? originalPrice : null,
-        monthly_sales: this.extractSales(ctx),
-        rating: this.extractRating(ctx),
-        reviews: this.extractReviewCount(ctx),
-        highlights: ['商品数据已接入', '支持实时价格查询'],
-        warnings: ['AI 深度分析尚未接入'],
-        gap_opportunities: ['接入 AI 分析获取竞品差异'],
+        name: '未知商品',
+        image: '📦',
+        shop_name: '',
+        category: '',
+        current_price: 0,
+        monthly_sales: 0,
+        rating: 0,
+        reviews: 0,
+        highlights: ['商品数据已接入'],
+        warnings: ['详情/评论/价格接口暂未接入'],
+        gap_opportunities: [],
         analyzed_at: new Date(),
       },
     });
 
     // 创建 5 个维度记录
     for (const dimType of DIMENSION_TYPES) {
-      const detail = { ...EMPTY_DETAIL[dimType] };
-      if (dimType === 'pricing') {
-        detail.competitorPrice = currentPrice;
-        detail.ourPrice = currentPrice;
-        detail.plans = [{ name: '标准版', price: currentPrice }];
-      }
       await this.prisma.analysisDimension.create({
         data: {
           analysis_id: analysis.id,
           dimension_type: dimType,
           score: 0,
-          detail,
+          detail: { ...EMPTY_DETAIL[dimType] },
         },
       });
     }
 
     // 保存原始数据
     await this.prisma.rawData.create({
-      data: {
-        analysis_id: analysis.id,
-        data: { detail: raw, comments: rawComments, price: rawPrice },
-      },
+      data: { analysis_id: analysis.id, data: {} },
     });
 
     return { code: 0, message: '分析完成', data: await this.loadAnalysis(analysis.id) };

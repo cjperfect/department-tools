@@ -1,0 +1,16 @@
+{
+  "name": "test-api-mock",
+  "version": "1.0.0",
+  "private": true,
+  "description": "简易 Mock API 服务器，模拟 JustOne API 返回",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
+  },
+  "dependencies": {
+    "express": "^5.2.1"
+  }
+}

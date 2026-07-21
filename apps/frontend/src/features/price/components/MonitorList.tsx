@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { ExternalLink, Loader2, Plus, RefreshCw, Search, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -11,6 +11,10 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
+import { Switch } from '@/components/ui/switch'
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select'
 import { MonitorForm, type MonitorFormData } from './MonitorForm'
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle,
@@ -21,15 +25,24 @@ import {
   refreshItem,
   searchCompare, type SearchResult,
   type MonitorProduct,
+  type MonitorItem,
 } from '@/api/price'
 import { toast } from 'sonner'
 
 const PLATFORM_COLORS: Record<string, string> = {
-  '京东': 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
-  '淘宝': 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
-  '天猫': 'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400',
-  '拼多多': 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400',
-  '抖音': 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400',
+  'jd': 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+  'taobao': 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
+  'tmall': 'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400',
+  'pdd': 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400',
+  'dy': 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400',
+}
+
+const PLATFORM_LABELS: Record<string, string> = {
+  'jd': '京东',
+  'taobao': '淘宝',
+  'tmall': '天猫',
+  'pdd': '拼多多',
+  'dy': '抖音',
 }
 
 interface Props {
@@ -45,9 +58,15 @@ export function MonitorList({ products, setProducts, loading }: Props) {
   // 比价搜索
   const [searchProduct, setSearchProduct] = useState<{ id: number; name: string } | null>(null)
   const [searchSheet, setSearchSheet] = useState(false)
-  const [searchResults, setSearchResults] = useState<SearchResult[]>([])
+  const [searchResults, setSearchResults] = useState<SearchResult | null>(null)
   const [searchLoading, setSearchLoading] = useState<number | null>(null)
   const [refreshLoading, setRefreshLoading] = useState<number | null>(null)
+
+  // 自动刷新
+  const [autoRefresh, setAutoRefresh] = useState(false)
+  const [intervalHours, setIntervalHours] = useState(1)
+  const productsRef = useRef(products)
+  productsRef.current = products
 
   const handleSearch = async (productId: number, productName: string) => {
     setSearchProduct({ id: productId, name: productName })
@@ -150,17 +169,93 @@ export function MonitorList({ products, setProducts, loading }: Props) {
     }
   }
 
+  // 自动刷新定时器（递归 setTimeout，避免 setInterval 漂移）
+  useEffect(() => {
+    if (!autoRefresh) return
+    let timer: ReturnType<typeof setTimeout>
+    const run = async () => {
+      const start = Date.now()
+      const current = productsRef.current
+      if (current.length > 0) {
+        const allItems = current.flatMap((p) =>
+          p.items.map((it) => ({ itemId: it.id }))
+        )
+        const results = await Promise.allSettled(
+          allItems.map(({ itemId }) => refreshItem(itemId))
+        )
+        setProducts((prev) => {
+          const updates = new Map<number, MonitorItem>()
+          results.forEach((result, i) => {
+            if (result.status === 'fulfilled') {
+              updates.set(allItems[i].itemId, result.value)
+            }
+          })
+          return prev.map((p) => ({
+            ...p,
+            items: p.items.map((it) => {
+              const u = updates.get(it.id)
+              return u ? { ...it, ...u } : it
+            }),
+          }))
+        })
+      }
+      // 减去本次执行耗时，补偿漂移
+      const elapsed = Date.now() - start
+      const next = Math.max(1000, intervalHours * 3600 * 1000 - elapsed)
+      timer = setTimeout(run, next)
+    }
+    timer = setTimeout(run, intervalHours * 3600 * 1000)
+    return () => clearTimeout(timer)
+  }, [autoRefresh, intervalHours])
+
   if (loading) return <div className='py-12 text-center text-muted-foreground'>加载中...</div>
 
   return (
     <>
       <Card>
         <CardHeader className='flex flex-row items-center justify-between'>
-          <CardTitle>监控列表</CardTitle>
-          <Button size='sm' onClick={() => setFormOpen(true)}>
-            <Plus className='mr-1 size-4' />
-            添加监控
-          </Button>
+          <div className='flex items-center gap-2'>
+            <CardTitle>监控列表</CardTitle>
+          </div>
+          <div className='flex items-center gap-3'>
+            <div className='flex items-center gap-2'>
+              <Switch
+                id='auto-refresh'
+                checked={autoRefresh}
+                onCheckedChange={setAutoRefresh}
+              />
+              <label
+                htmlFor='auto-refresh'
+                className='text-xs font-medium text-muted-foreground cursor-pointer select-none'
+              >
+                自动刷新
+              </label>
+            </div>
+            {autoRefresh && (
+              <div className='flex items-center gap-1.5'>
+                <span className='text-xs text-muted-foreground'>间隔</span>
+                <Select
+                  value={String(intervalHours)}
+                  onValueChange={(v) => setIntervalHours(Number(v))}
+                >
+                  <SelectTrigger className='h-6 w-24 text-xs'>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {[1, 2, 3, 6, 12, 24].map((h) => (
+                      <SelectItem key={h} value={String(h)}>
+                        {h} 小时
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            <Button size='sm' onClick={() => setFormOpen(true)}>
+              <Plus className='mr-1 size-4' />
+              添加监控
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           {products.length === 0 ? (
@@ -206,14 +301,15 @@ export function MonitorList({ products, setProducts, loading }: Props) {
           </SheetHeader>
           <ScrollArea className='h-[calc(100vh-120px)] mt-4'>
             <div className='px-4'>
-              {searchResults.length === 0 ? (
+              {!searchResults ? (
                 <p className='text-sm text-muted-foreground text-center py-8'>搜索中...</p>
+              ) : searchResults.itemList.length === 0 ? (
+                <p className='text-sm text-muted-foreground text-center py-8'>暂无结果</p>
               ) : (
-                <div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
-                  {searchResults.map(({ platform, items }) => {
-                    const cheapest = items.reduce((a, b) => a.price < b.price ? a : b)
-                    return <PlatformResults key={platform} platform={platform} results={items} cheapest={cheapest} />
-                  })}
+                <div className='grid grid-cols-1 sm:grid-cols-2 gap-3'>
+                  {searchResults.itemList.map((item, idx) => (
+                    <SearchItemCard key={idx} item={item} />
+                  ))}
                 </div>
               )}
             </div>
@@ -225,57 +321,29 @@ export function MonitorList({ products, setProducts, loading }: Props) {
 }
 
 // ====================================================================
-// 比价结果
+// 比价结果卡片
 // ====================================================================
 
-interface SearchItem {
-  name: string; price: number; shop: string; url: string
-}
-
-function PlatformResults({ platform, results, cheapest }: {
-  platform: string
-  results: SearchItem[]
-  cheapest: SearchItem
-}) {
-  const [expanded, setExpanded] = useState(true)
-  const items = expanded ? results : [cheapest]
-
+function SearchItemCard({ item }: { item: SearchResult['itemList'][number] }) {
   return (
-    <div>
-      <div className='flex items-center justify-between mb-2'>
-        <Badge className={`text-xs ${PLATFORM_COLORS[platform] || ''}`}>
-          {platform}
-        </Badge>
-        {results.length > 1 && (
-          <button
-            onClick={() => setExpanded(!expanded)}
-            className='text-xs text-muted-foreground hover:text-foreground'
-          >
-            {expanded ? `收起` : `展开全部 ${results.length} 条`}
-          </button>
-        )}
+    <div className='flex items-center gap-3 rounded-lg border p-3 text-sm hover:bg-muted/50 transition-colors'>
+      <img
+        src={item.image}
+        alt={item.name}
+        className='size-12 rounded object-cover shrink-0 bg-muted'
+        loading='lazy'
+      />
+      <div className='flex-1 min-w-0'>
+        <p className='font-medium truncate text-xs'>{item.name}</p>
+        <p className='text-xs text-muted-foreground'>{item.shop}</p>
       </div>
-      <div className='space-y-2'>
-        {items.map((item, idx) => (
-          <div
-            key={idx}
-            className='flex items-center gap-3 rounded-lg border p-3 text-sm hover:bg-muted/50 transition-colors'
-          >
-            <div className='flex-1 min-w-0'>
-              <p className='font-medium truncate'>{item.name}</p>
-              <p className='text-xs text-muted-foreground'>{item.shop}</p>
-            </div>
-            <span className='font-mono font-bold text-red-600 shrink-0'>
-              ¥{item.price}
-            </span>
-            <a href={item.url} target='_blank' rel='noopener noreferrer'
-              className='shrink-0 text-muted-foreground hover:text-blue-600'>
-              <ExternalLink className='size-4' />
-            </a>
-          </div>
-        ))}
-      </div>
-      <Separator className='mt-4' />
+      <span className='font-mono font-bold text-red-600 shrink-0 text-sm'>
+        ¥{item.price}
+      </span>
+      <a href={item.url} target='_blank' rel='noopener noreferrer'
+        className='shrink-0 text-muted-foreground hover:text-blue-600'>
+        <ExternalLink className='size-4' />
+      </a>
     </div>
   )
 }
@@ -309,7 +377,11 @@ function ProductCard({
     <div className='rounded-lg border'>
       <div className='flex items-center justify-between px-4 py-3'>
         <div className='flex items-center gap-3'>
-          <span className='text-2xl'>{product.image}</span>
+          {product.image.startsWith('http') ? (
+            <img src={product.image} alt={product.name} className='size-8 rounded object-cover' />
+          ) : (
+            <span className='text-2xl'>{product.image}</span>
+          )}
           <div>
             <h3 className='font-medium text-sm'>{product.name}</h3>
             <p className='text-xs text-muted-foreground'>
@@ -378,7 +450,7 @@ function ProductCard({
         {product.items.map((item) => (
           <div key={item.id} className='flex items-center gap-3 py-2.5 border-b last:border-0 text-sm'>
             <Badge className={`shrink-0 text-xs ${PLATFORM_COLORS[item.platform] || ''}`}>
-              {item.platform}
+              {PLATFORM_LABELS[item.platform] || item.platform}
             </Badge>
             <div className='flex items-center gap-3 flex-1 min-w-0'>
               <span className='font-mono font-medium'>¥{item.currentPrice.toLocaleString()}</span>

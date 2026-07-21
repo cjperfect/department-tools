@@ -28,9 +28,17 @@ export interface MonitorStats {
   priceUp: number
 }
 
+export interface SearchItem {
+  name: string
+  price: number
+  shop: string
+  url: string
+  image: string
+}
+
 export interface SearchResult {
-  platform: string
-  items: { name: string; price: number; shop: string; url: string }[]
+  itemList: SearchItem[]
+  pageSize: number
 }
 
 // ---------------------------------------------------------------------------

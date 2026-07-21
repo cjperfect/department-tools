@@ -14,7 +14,7 @@ export class MonitorItemIn {
   platform: string;
 
   @IsString()
-  @MinLength(1)
+  @IsOptional()
   url: string;
 
   @IsNumber()

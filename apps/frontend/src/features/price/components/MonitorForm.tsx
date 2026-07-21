@@ -9,11 +9,9 @@ import {
 } from '@/components/ui/dialog'
 
 const PLATFORM_OPTIONS = [
-  { id: '京东', label: '京东' },
-  { id: '淘宝', label: '淘宝' },
-  { id: '天猫', label: '天猫' },
-  { id: '拼多多', label: '拼多多' },
-  { id: '抖音', label: '抖音' },
+  { id: 'jd', label: '京东' },
+  { id: 'taobao', label: '淘宝 / 天猫' },
+  { id: 'dy', label: '抖音' },
 ]
 
 interface MonitorFormProps {
@@ -30,7 +28,7 @@ export interface MonitorFormData {
 export function MonitorForm({ open, onOpenChange, onSubmit }: MonitorFormProps) {
   const [name, setName] = useState('')
   const [unifiedPrice, setUnifiedPrice] = useState<number>(0)
-  const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>(['京东', '淘宝', '天猫'])
+  const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>(['jd', 'taobao'])
   const [platformPrices, setPlatformPrices] = useState<Record<string, number>>({})
 
   const handleUnifiedPriceChange = (price: number) => {
@@ -67,7 +65,7 @@ export function MonitorForm({ open, onOpenChange, onSubmit }: MonitorFormProps) 
     setName('')
     setUnifiedPrice(0)
     setPlatformPrices({})
-    setSelectedPlatforms(['京东', '淘宝', '天猫'])
+    setSelectedPlatforms(['jd', 'taobao'])
   }
 
   return (
@@ -104,7 +102,7 @@ export function MonitorForm({ open, onOpenChange, onSubmit }: MonitorFormProps) 
             <div className='space-y-2'>
               {PLATFORM_OPTIONS.map((p) => (
                 <div key={p.id} className='flex items-center gap-3'>
-                  <label className='flex items-center gap-2 text-sm cursor-pointer w-20 shrink-0'>
+                  <label className='flex items-center gap-2 text-sm cursor-pointer w-24 shrink-0'>
                     <Checkbox
                       checked={selectedPlatforms.includes(p.id)}
                       onCheckedChange={() => togglePlatform(p.id)}

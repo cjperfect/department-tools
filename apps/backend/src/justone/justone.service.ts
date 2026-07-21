@@ -1,10 +1,13 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
-const BASE_URL = 'https://api.justoneapi.com';
-const PLATFORM_JD = '京东';
-const PLATFORM_TMALL = '天猫';
-const PLATFORM_TAOBAO = '淘宝';
+const PRODUCTION_BASE_URL = 'https://api.justoneapi.com';
+
+const SEARCH_API: Record<string, string> = {
+  taobao: '/api/taobao/search-item-list/v1',
+  dy: '/api/douyin-ec/search-item-list/v1',
+  jd: '/api/jd/search-item-list/v1',
+};
 
 @Injectable()
 export class JustOneService {
@@ -16,18 +19,21 @@ export class JustOneService {
   }
 
   get isAvailable(): boolean {
-    return !!this.token;
+    return true;
+  }
+
+  private get baseUrl(): string {
+    return this.configService.get<string>('JUSTONE_BASE_URL') || PRODUCTION_BASE_URL;
   }
 
   // ------------------------------------------------------------------
-  // 统一 HTTP 调用
+  // HTTP 调用
   // ------------------------------------------------------------------
 
   private async get(path: string, params: Record<string, any> = {}): Promise<any> {
-    if (!this.token) return null;
     try {
-      const url = new URL(path, BASE_URL);
-      url.searchParams.set('token', this.token);
+      const url = new URL(path, this.baseUrl);
+      if (this.token) url.searchParams.set('token', this.token);
       for (const [key, value] of Object.entries(params)) {
         if (value != null) {
           url.searchParams.set(key, String(value));
@@ -45,46 +51,86 @@ export class JustOneService {
   }
 
   // ------------------------------------------------------------------
-  // 商品详情
+  // 商品搜索
   // ------------------------------------------------------------------
 
-  async getProductDetail(platform: string, productId: string): Promise<any> {
-    if (platform === PLATFORM_TMALL || platform === PLATFORM_TAOBAO) {
-      const data = await this.get('/api/taobao/get-item-detail/v4', { itemId: productId });
-      return data;
-    }
-    if (platform === PLATFORM_JD) {
-      const data = await this.get('/api/jd/get-item-detail/v2', { itemId: productId });
-      return data?.item || data;
-    }
-    return null;
+  async searchProducts(platform: string, keyword: string): Promise<{
+    itemList: any[]
+  } | null> {
+    const api = SEARCH_API[platform];
+    if (!api) return null;
+    const data = await this.get(api, { keyword });
+    if (!data) return null;
+
+    // 不同平台返回格式不同
+    const extractors: Record<string, (d: any) => any[]> = {
+      taobao: (d) => d.model?.itemList,
+      jd: (d) => d.products,
+      dy: (d) => d.promotions,
+    };
+
+    const extract = extractors[platform];
+    if (!extract) return null;
+    const items = extract(data) || [];
+    return { itemList: items };
   }
 
-  // ------------------------------------------------------------------
-  // 商品评论
-  // ------------------------------------------------------------------
+  /**
+   * 搜索商品并返回第一条标准化结果，用于快速获取价格/图片/URL。
+   * 无结果或失败返回 null。
+   */
+  async searchFirstProduct(platform: string, keyword: string): Promise<{
+    name: string;
+    price: number;
+    url: string;
+    image: string;
+    shop: string;
+  } | null> {
+    const result = await this.searchProducts(platform, keyword);
+    if (!result || !result.itemList.length) return null;
 
-  async getProductComments(platform: string, productId: string): Promise<any> {
-    if (platform === PLATFORM_TMALL || platform === PLATFORM_TAOBAO) {
-      return this.get('/api/taobao/get-item-comment/v3', { itemId: productId, page: 1 });
+    const items = result.itemList;
+
+    switch (platform) {
+      case 'taobao': {
+        const first = items[0];
+        return {
+          name: first.itemName ?? '',
+          price: first.priceYuanDouble ?? 0,
+          url: first.itemId
+            ? `https://item.taobao.com/item.htm?id=${first.itemId}`
+            : '',
+          image: first.picUrlFull ?? '',
+          shop: first.shopName ?? '',
+        };
+      }
+      case 'jd': {
+        const first = items[0];
+        return {
+          name: first.title ?? '',
+          price: parseFloat(first.price) || 0,
+          url: first.landUrl ?? '',
+          image: first.imageUrl
+            ? (first.imageUrl.startsWith('http') ? first.imageUrl : `https:${first.imageUrl}`)
+            : '',
+          shop: first.shopName ?? '',
+        };
+      }
+      case 'dy': {
+        const first = items[0];
+        const baseModel = first.base_model ?? {};
+        const priceDesc = baseModel.marketing_info?.price_desc?.price;
+        return {
+          name: baseModel.product_info?.name ?? '',
+          price: priceDesc ? priceDesc.origin / 100 : 0,
+          url: baseModel.product_info?.detail_url ?? '',
+          image: baseModel.product_info?.main_img?.url_list?.[0] ?? '',
+          shop: baseModel.shop_info?.shop_name ?? '',
+        };
+      }
+      default:
+        return null;
     }
-    if (platform === PLATFORM_JD) {
-      return this.get('/api/jd/get-item-comments/v2', { itemId: productId });
-    }
-    return null;
   }
 
-  // ------------------------------------------------------------------
-  // 商品价格 / 销量
-  // ------------------------------------------------------------------
-
-  async getProductPrice(platform: string, productId: string): Promise<any> {
-    if (platform === PLATFORM_TMALL || platform === PLATFORM_TAOBAO) {
-      return this.get('/api/taobao/get-item-sale/v1', { itemId: productId });
-    }
-    if (platform === PLATFORM_JD) {
-      return this.get('/api/jd/get-item-price/v1', { itemId: productId });
-    }
-    return null;
-  }
 }

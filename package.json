@@ -9,7 +9,9 @@
     "build": "pnpm -r build",
     "build:frontend": "pnpm --filter @department-tools/frontend build",
     "build:backend": "pnpm --filter @department-tools/backend build",
-    "seed": "pnpm --filter @department-tools/backend seed",
+    "db:seed": "pnpm --filter @department-tools/backend db:seed",
+    "db:migrate": "pnpm --filter @department-tools/backend db:migrate",
+    "db:push": "pnpm --filter @department-tools/backend db:push",
     "lint": "pnpm -r lint",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
