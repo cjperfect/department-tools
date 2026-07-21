@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { X } from 'lucide-react'
+import { Dialog, DialogPortal } from './ui/dialog'
 
 interface ImageViewerProps {
   src: string
@@ -16,31 +17,35 @@ export function ImageViewer({ src, alt = '', className }: ImageViewerProps) {
 
   return (
     <>
-      <img
-        src={src}
-        alt={alt}
-        className={`cursor-zoom-in object-cover ${className}`}
-        onClick={() => setOpen(true)}
-      />
-      {open && (
-        <div
-          className='fixed inset-0 z-50 flex items-center justify-center bg-black/80 cursor-zoom-out'
-          onClick={() => setOpen(false)}
-        >
-          <button
-            className='absolute top-4 right-4 text-white/70 hover:text-white'
+      <div className={`cursor-zoom-in shrink-0 overflow-hidden ${className}`}>
+        <img
+          src={src}
+          alt={alt}
+          className='size-full object-cover'
+          onClick={() => setOpen(true)}
+        />
+      </div>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogPortal>
+          <div
+            className='fixed inset-0 z-50 flex items-center justify-center bg-black/80 animate-in fade-in-0'
             onClick={() => setOpen(false)}
           >
-            <X className='size-6' />
-          </button>
-          <img
-            src={src}
-            alt={alt}
-            className='max-w-[90vw] max-h-[90vh] object-contain rounded-lg'
-            onClick={(e) => e.stopPropagation()}
-          />
-        </div>
-      )}
+            <button
+              className='absolute top-4 right-4 text-white/70 hover:text-white'
+              onClick={() => setOpen(false)}
+            >
+              <X className='size-6' />
+            </button>
+            <img
+              src={src}
+              alt={alt}
+              className='max-w-[90vw] max-h-[90vh] object-contain rounded-lg'
+              onClick={(e) => e.stopPropagation()}
+            />
+          </div>
+        </DialogPortal>
+      </Dialog>
     </>
   )
 }
