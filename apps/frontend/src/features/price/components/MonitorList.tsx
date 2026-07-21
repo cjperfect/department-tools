@@ -1,10 +1,9 @@
 import { useState, useEffect, useRef } from 'react'
-import { ExternalLink, Loader2, Plus, RefreshCw, Search, Trash2 } from 'lucide-react'
+import { ChevronDown, ChevronsDownUp, ExternalLink, Loader2, Plus, RefreshCw, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
-import { StatusBadge } from '@/components/StatusBadge'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import {
   Tooltip,
@@ -18,13 +17,8 @@ import {
 import { MonitorForm, type MonitorFormData } from './MonitorForm'
 import { ImageViewer } from '@/components/ImageViewer'
 import {
-  Sheet, SheetContent, SheetHeader, SheetTitle,
-} from '@/components/ui/sheet'
-import { ScrollArea } from '@/components/ui/scroll-area'
-import {
   addMonitor, getMonitorList, deleteProduct, deleteItem,
   refreshItem,
-  searchCompare, type SearchResult,
   type MonitorProduct,
   type MonitorItem,
 } from '@/api/price'
@@ -56,11 +50,9 @@ export function MonitorList({ products, setProducts, loading }: Props) {
   const [formOpen, setFormOpen] = useState(false)
   const [deleteInfo, setDeleteInfo] = useState<{ productId?: number; itemId?: number; label?: string } | null>(null)
 
-  // 比价搜索
-  const [searchProduct, setSearchProduct] = useState<{ id: number; name: string } | null>(null)
-  const [searchSheet, setSearchSheet] = useState(false)
-  const [searchResults, setSearchResults] = useState<SearchResult | null>(null)
-  const [searchLoading, setSearchLoading] = useState<number | null>(null)
+  // 平台折叠（key: `${productId}-${platform}`）
+  const [expandedPlatforms, setExpandedPlatforms] = useState<Set<string>>(new Set())
+
   const [refreshLoading, setRefreshLoading] = useState<number | null>(null)
 
   // 自动刷新
@@ -69,18 +61,36 @@ export function MonitorList({ products, setProducts, loading }: Props) {
   const productsRef = useRef(products)
   productsRef.current = products
 
-  const handleSearch = async (productId: number, productName: string) => {
-    setSearchProduct({ id: productId, name: productName })
-    setSearchLoading(productId)
-    try {
-      const results = await searchCompare(productId)
-      setSearchResults(results)
-      setSearchSheet(true)
-    } catch {
-      toast.error('比价查询失败')
-    } finally {
-      setSearchLoading(null)
-    }
+  const togglePlatform = (key: string) => {
+    setExpandedPlatforms((prev) => {
+      const next = new Set(prev)
+      if (next.has(key)) {
+        next.delete(key)
+      } else {
+        next.add(key)
+      }
+      return next
+    })
+  }
+
+  const expandAllPlatforms = (productId: number, platforms: string[]) => {
+    setExpandedPlatforms((prev) => {
+      const next = new Set(prev)
+      for (const p of platforms) {
+        next.add(`${productId}-${p}`)
+      }
+      return next
+    })
+  }
+
+  const collapseAllPlatforms = (productId: number, platforms: string[]) => {
+    setExpandedPlatforms((prev) => {
+      const next = new Set(prev)
+      for (const p of platforms) {
+        next.delete(`${productId}-${p}`)
+      }
+      return next
+    })
   }
 
   const handleAdd = async (data: MonitorFormData) => {
@@ -97,21 +107,6 @@ export function MonitorList({ products, setProducts, loading }: Props) {
       toast.success(`已添加「${data.keyword}」`)
     } catch (err) {
       toast.error(err instanceof Error ? err.message : '添加失败')
-    }
-  }
-
-  const handleRefreshItem = async (itemId: number) => {
-    try {
-      const updated = await refreshItem(itemId)
-      setProducts((prev) =>
-        prev.map((p) => ({
-          ...p,
-          items: p.items.map((it) => (it.id === itemId ? { ...it, ...updated } : it)),
-        }))
-      )
-      toast.success('价格已刷新')
-    } catch {
-      toast.error('刷新失败')
     }
   }
 
@@ -229,19 +224,19 @@ export function MonitorList({ products, setProducts, loading }: Props) {
               />
               <label
                 htmlFor='auto-refresh'
-                className='text-xs font-medium text-muted-foreground cursor-pointer select-none'
+                className='text-sm font-medium text-muted-foreground cursor-pointer select-none'
               >
                 自动刷新
               </label>
             </div>
             {autoRefresh && (
               <div className='flex items-center gap-1.5'>
-                <span className='text-xs text-muted-foreground'>间隔</span>
+                <span className='text-sm text-muted-foreground'>间隔</span>
                 <Select
                   value={String(intervalHours)}
                   onValueChange={(v) => setIntervalHours(Number(v))}
                 >
-                  <SelectTrigger className='h-6 w-24 text-xs'>
+                  <SelectTrigger className='h-6 w-24 text-sm'>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -264,17 +259,18 @@ export function MonitorList({ products, setProducts, loading }: Props) {
           {products.length === 0 ? (
             <div className='py-12 text-center text-muted-foreground'>暂无监控产品</div>
           ) : (
-            <div className='grid gap-4 grid-cols-1 lg:grid-cols-2'>
+            <div className='grid gap-4 grid-cols-1'>
               {products.map((product) => (
                 <ProductCard
                   key={product.id}
                   product={product}
+                  expandedPlatforms={expandedPlatforms}
+                  onTogglePlatform={(key) => togglePlatform(key)}
+                  onExpandAll={() => expandAllPlatforms(product.id, [...new Set(product.items.map((it) => it.platform))])}
+                  onCollapseAll={() => collapseAllPlatforms(product.id, [...new Set(product.items.map((it) => it.platform))])}
                   onDeleteProduct={() => setDeleteInfo({ productId: product.id, label: product.keyword })}
                   onDeleteItem={(itemId, label) => setDeleteInfo({ itemId, label })}
-                  onRefreshItem={(itemId) => handleRefreshItem(itemId)}
                   onRefreshProduct={() => handleRefreshProduct(product.id)}
-                  onSearch={() => handleSearch(product.id, product.keyword)}
-                  searchLoading={searchLoading}
                   refreshLoading={refreshLoading}
                 />
               ))}
@@ -295,76 +291,25 @@ export function MonitorList({ products, setProducts, loading }: Props) {
       />
 
       <MonitorForm open={formOpen} onOpenChange={setFormOpen} onSubmit={handleAdd} />
-
-      {/* 快速比价抽屉 */}
-      <Sheet open={searchSheet} onOpenChange={setSearchSheet}>
-        <SheetContent side='right' className='w-[95vw] sm:max-w-[900px]'>
-          <SheetHeader>
-            <SheetTitle>比价「{searchProduct?.name || ''}」</SheetTitle>
-          </SheetHeader>
-          <ScrollArea className='h-[calc(100vh-120px)] mt-4'>
-            <div className='px-4'>
-              {!searchResults ? (
-                <p className='text-sm text-muted-foreground text-center py-8'>搜索中...</p>
-              ) : searchResults.groups.length === 0 ? (
-                <p className='text-sm text-muted-foreground text-center py-8'>暂无结果</p>
-              ) : (
-                <div className='space-y-6'>
-                  {searchResults.groups.map((group) => (
-                    <div key={group.platform}>
-                      <h4 className='text-sm font-semibold mb-3 flex items-center gap-2'>
-                        <Badge className={`text-xs ${PLATFORM_COLORS[group.platform] || ''}`}>
-                          {PLATFORM_LABELS[group.platform] || group.platform}
-                        </Badge>
-                        <span className='text-muted-foreground'>{group.items.length} 个商品</span>
-                      </h4>
-                      <div className='grid grid-cols-1 sm:grid-cols-2 gap-3'>
-                        {group.items.map((item, idx) => (
-                          <SearchItemCard key={idx} item={item} />
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </ScrollArea>
-        </SheetContent>
-      </Sheet>
     </>
   )
 }
 
 // ====================================================================
-// 比价结果卡片
+// 辅助：按平台分组
 // ====================================================================
 
-function SearchItemCard({ item }: { item: SearchResult['groups'][number]['items'][number] }) {
-  return (
-    <div className='flex items-center gap-3 rounded-lg border p-3 text-sm hover:bg-muted/50 transition-colors'>
-      <ImageViewer
-        src={item.image}
-        alt={item.name}
-        className='size-12 rounded shrink-0 bg-muted'
-      />
-      <div className='flex-1 min-w-0'>
-        <div className='flex items-center gap-2'>
-          <Badge className={`shrink-0 text-[10px] px-1.5 py-0 ${PLATFORM_COLORS[item.platform] || ''}`}>
-            {PLATFORM_LABELS[item.platform] || item.platform}
-          </Badge>
-          <p className='font-medium truncate text-xs'>{item.name}</p>
-        </div>
-        <p className='text-xs text-muted-foreground mt-0.5'>{item.shop}</p>
-      </div>
-      <span className='font-mono font-bold text-red-600 shrink-0 text-sm'>
-        ¥{item.price}
-      </span>
-      <a href={item.url} target='_blank' rel='noopener noreferrer'
-        className='shrink-0 text-muted-foreground hover:text-blue-600'>
-        <ExternalLink className='size-4' />
-      </a>
-    </div>
-  )
+function groupByPlatform(items: MonitorItem[]): { platform: string; items: MonitorItem[] }[] {
+  const map = new Map<string, MonitorItem[]>()
+  for (const item of items) {
+    const list = map.get(item.platform)
+    if (list) {
+      list.push(item)
+    } else {
+      map.set(item.platform, [item])
+    }
+  }
+  return [...map.entries()].map(([platform, items]) => ({ platform, items }))
 }
 
 // ====================================================================
@@ -373,27 +318,31 @@ function SearchItemCard({ item }: { item: SearchResult['groups'][number]['items'
 
 function ProductCard({
   product,
+  expandedPlatforms,
+  onTogglePlatform,
+  onExpandAll,
+  onCollapseAll,
   onDeleteProduct,
   onDeleteItem,
-  onRefreshItem,
   onRefreshProduct,
-  onSearch,
-  searchLoading,
   refreshLoading,
 }: {
   product: MonitorProduct
+  expandedPlatforms: Set<string>
+  onTogglePlatform: (key: string) => void
+  onExpandAll: () => void
+  onCollapseAll: () => void
   onDeleteProduct: () => void
   onDeleteItem: (id: number, label: string) => void
-  onRefreshItem: (id: number) => void
   onRefreshProduct: () => void
-  onSearch: () => void
-  searchLoading: number | null
   refreshLoading: number | null
 }) {
-  const triggeredCount = product.items.filter((it) => it.status === 1).length
+  const groups = groupByPlatform(product.items)
+  const allExpanded = groups.every((g) => expandedPlatforms.has(`${product.id}-${g.platform}`))
 
   return (
     <div className='rounded-lg border'>
+      {/* 产品头部 */}
       <div className='flex items-center justify-between px-4 py-3'>
         <div className='flex items-center gap-3'>
           {product.image.startsWith('http') ? (
@@ -402,14 +351,9 @@ function ProductCard({
             <span className='text-2xl'>{product.image}</span>
           )}
           <div>
-            <h3 className='font-medium text-sm'>{product.keyword}</h3>
-            <p className='text-xs text-muted-foreground'>
-              {product.items.length} 个平台
-              {triggeredCount > 0 && (
-                <span className='ml-2 text-red-600 font-medium'>
-                  {triggeredCount} 个已触发
-                </span>
-              )}
+            <h3 className='font-medium text-base'>{product.keyword}</h3>
+            <p className='text-sm text-muted-foreground'>
+              {groups.length} 个平台 · {product.items.length} 条记录
             </p>
           </div>
         </div>
@@ -420,7 +364,7 @@ function ProductCard({
                 variant='outline'
                 size='sm'
                 onClick={onRefreshProduct}
-                className='h-7 text-xs gap-1'
+                className='h-7 text-sm gap-1'
                 disabled={refreshLoading === product.id}
               >
                 {refreshLoading === product.id ? (
@@ -438,71 +382,123 @@ function ProductCard({
               <Button
                 variant='outline'
                 size='sm'
-                onClick={onSearch}
-                className='h-7 text-xs gap-1'
-                disabled={searchLoading === product.id}
+                onClick={allExpanded ? onCollapseAll : onExpandAll}
+                className='h-7 text-sm gap-1'
               >
-                {searchLoading === product.id ? (
-                  <Loader2 className='size-3 animate-spin' strokeWidth={2.5} />
-                ) : (
-                  <Search className='size-3' strokeWidth={2.5} />
-                )}
-                比价
+                <ChevronsDownUp className='size-3' strokeWidth={2.5} />
+                {allExpanded ? '全部折叠' : '全部展开'}
               </Button>
             </TooltipTrigger>
-            <TooltipContent className='font-bold'>跨平台搜索比价</TooltipContent>
+            <TooltipContent className='font-bold'>{allExpanded ? '折叠所有平台' : '展开所有平台'}</TooltipContent>
           </Tooltip>
           <Tooltip>
-          <TooltipTrigger asChild>
-            <Button variant='ghost' size='icon'
-              className='text-red-500 hover:bg-red-50 hover:text-red-600'
-              onClick={onDeleteProduct}>
-              <Trash2 className='size-4' />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent className='font-bold'>删除产品</TooltipContent>
-        </Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant='ghost' size='icon'
+                className='text-red-500 hover:bg-red-50 hover:text-red-600'
+                onClick={onDeleteProduct}>
+                <Trash2 className='size-4' />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent className='font-bold'>删除产品</TooltipContent>
+          </Tooltip>
+        </div>
       </div>
-      </div>
+
+      {/* 平台列表 */}
       <Separator />
-      <div className='px-4 py-2'>
-        {product.items.map((item) => (
-          <div key={item.id} className='flex items-center gap-3 py-2.5 border-b last:border-0 text-sm'>
-            <Badge className={`shrink-0 text-xs ${PLATFORM_COLORS[item.platform] || ''}`}>
-              {PLATFORM_LABELS[item.platform] || item.platform}
-            </Badge>
-            <div className='flex items-center gap-3 flex-1 min-w-0'>
-              <span className='font-mono font-medium'>¥{item.currentPrice.toLocaleString()}</span>
-              <span className='text-muted-foreground'>→ 目标</span>
-              <span className='font-mono'>¥{item.targetPrice.toLocaleString()}</span>
-              <span className={`font-mono text-xs ${item.diff <= 0 ? 'text-green-600' : 'text-red-500'}`}>
-                {item.diff > 0 ? '+' : ''}¥{Math.abs(item.diff).toLocaleString()}
-              </span>
-            </div>
-            <StatusBadge status={item.statusText} variant={item.status === 1 ? 'success' : 'info'} />
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant='ghost' size='icon'
-                  className='shrink-0 size-6 text-muted-foreground hover:text-blue-500'
-                  onClick={() => onRefreshItem(item.id)}>
-                  <RefreshCw className='size-3' />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent className='font-bold'>刷新价格</TooltipContent>
-            </Tooltip>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant='ghost' size='icon'
-                  className='shrink-0 size-6 text-muted-foreground hover:text-red-500'
-                  onClick={() => onDeleteItem(item.id, `${product.keyword} - ${item.platform}`)}>
-                  <Trash2 className='size-3' />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent className='font-bold'>删除</TooltipContent>
-            </Tooltip>
+      <div className='px-4 py-2 space-y-1'>
+            {groups.map((group) => {
+              const platformKey = `${product.id}-${group.platform}`
+              const isExpanded = expandedPlatforms.has(platformKey)
+              return (
+                <div key={group.platform} className='rounded-md border'>
+                  {/* 平台头部 — 可折叠 */}
+                  <button
+                    type='button'
+                    className='w-full flex items-center gap-3 px-3 py-2.5 hover:bg-muted/30 transition-colors text-left'
+                    onClick={() => onTogglePlatform(platformKey)}
+                  >
+                    <ChevronDown
+                      className={`size-3.5 text-muted-foreground shrink-0 transition-transform duration-200 ${
+                        isExpanded ? 'rotate-0' : '-rotate-90'
+                      }`}
+                    />
+                    <Badge className={`shrink-0 text-sm ${PLATFORM_COLORS[group.platform] || ''}`}>
+                      {PLATFORM_LABELS[group.platform] || group.platform}
+                    </Badge>
+                    <span className='text-sm text-muted-foreground'>
+                      {group.items.length} 条记录
+                    </span>
+                  </button>
+
+                  {/* 平台下的条目列表 */}
+                  {isExpanded && (
+                    <>
+                      <Separator />
+                      <div className='grid grid-cols-1 sm:grid-cols-2 gap-2 p-2'>
+                        {group.items.map((item) => (
+                          <div key={item.id} className='flex items-center gap-2 rounded-md border p-2 text-base'>
+                            {/* 商品图片 */}
+                            {item.image ? (
+                              <ImageViewer src={item.image} alt={item.name || item.platform} className='size-10 rounded shrink-0 bg-muted' />
+                            ) : (
+                              <div className='size-10 rounded shrink-0 bg-muted flex items-center justify-center text-muted-foreground text-sm'>
+                                无图
+                              </div>
+                            )}
+
+                            {/* 中间信息 */}
+                            <div className='flex-1 min-w-0 space-y-0.5'>
+                              <div className='flex items-center gap-1.5'>
+                                {item.name && (
+                                  <span className='font-medium text-sm leading-relaxed truncate'>{item.name}</span>
+                                )}
+                              </div>
+                              {item.shopName && (
+                                <p className='text-sm text-muted-foreground truncate'>{item.shopName}</p>
+                              )}
+                              <div className='flex items-center gap-2 text-sm'>
+                                <span className='font-mono font-medium'>¥{item.currentPrice.toLocaleString()}</span>
+                                <span className='text-muted-foreground'>→ ¥{item.targetPrice.toLocaleString()}</span>
+                                <span className={`font-mono ${item.diff <= 0 ? 'text-green-600' : 'text-red-500'}`}>
+                                  {item.diff > 0 ? '+' : ''}¥{Math.abs(item.diff).toLocaleString()}
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* 右侧操作 */}
+                            <div className='flex items-center gap-0.5 shrink-0'>
+                              {item.url && (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <a href={item.url} target='_blank' rel='noopener noreferrer'
+                                      className='inline-flex items-center justify-center size-7 text-muted-foreground hover:text-blue-600 rounded-md hover:bg-muted'>
+                                      <ExternalLink className='size-3.5' />
+                                    </a>
+                                  </TooltipTrigger>
+                                  <TooltipContent className='font-bold'>打开商品链接</TooltipContent>
+                                </Tooltip>
+                              )}
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button variant='ghost' size='icon'
+                                    className='size-7 text-muted-foreground hover:text-red-500'
+                                    onClick={() => onDeleteItem(item.id, item.name)}>
+                                    <Trash2 className='size-3' />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent className='font-bold'>删除</TooltipContent>
+                              </Tooltip>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
+              )
+            })}
           </div>
-        ))}
-      </div>
-    </div>
-  )
-}
+        </div>
+      )
+    }

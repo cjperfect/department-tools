@@ -7,11 +7,11 @@ export interface MonitorItem {
   platform: string
   url: string
   image: string
+  name: string
+  shopName: string
   currentPrice: number
   targetPrice: number
   diff: number
-  status: number // 0=监控中 1=已触发
-  statusText: string
 }
 
 export interface MonitorProduct {

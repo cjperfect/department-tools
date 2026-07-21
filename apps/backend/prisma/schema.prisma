@@ -96,12 +96,13 @@ model MonitorItem {
   id            Int      @id @default(autoincrement())
   product_id    Int
   platform      String   @db.VarChar(32)
+  name          String   @default("") @db.VarChar(512)
+  shop_name     String   @default("") @db.VarChar(256)
   url           String   @db.VarChar(768)
   image         String   @default("") @db.VarChar(768)
   current_price Float
   target_price  Float
   diff          Float    @default(0)
-  status        Int      @default(0)
   created_at    DateTime @default(now())
   updated_at    DateTime @updatedAt
 

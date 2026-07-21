@@ -57,26 +57,9 @@ export class PriceController {
     return this.priceService.getStats();
   }
 
-  @Get('compare/:itemId')
-  async getCompare(@Param('itemId', ParseIntPipe) itemId: number) {
-    return this.priceService.getCompare(itemId);
-  }
-
   @Post('monitor/refresh/:itemId')
   async refreshItem(@Param('itemId', ParseIntPipe) itemId: number) {
     return this.priceService.refreshItem(itemId);
   }
 
-  @Get('search/:productId')
-  async searchCompare(
-    @CurrentUser() user: any,
-    @Param('productId', ParseIntPipe) productId: number,
-  ) {
-    return this.priceService.searchCompare(user.id, productId);
-  }
-
-  @Get('history/:itemId')
-  async getHistory(@Param('itemId', ParseIntPipe) itemId: number) {
-    return this.priceService.getHistory(itemId);
-  }
 }

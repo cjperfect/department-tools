@@ -98,7 +98,7 @@ export class JustOneService {
           name: first.title ?? '',
           price: parseFloat(first.price) || 0,
           url: first.click ?? '',
-          image: first.imageUrl,
+          image: first.imageUrl ? `https://img10.360buyimg.com/pcpubliccms/${first.imageUrl}` : '',
           shop: first.shopName ?? '',
         };
       }
@@ -107,8 +107,8 @@ export class JustOneService {
         return {
           name: first.itemName ?? '',
           price: first.priceYuanDouble ?? 0,
-          url: '',
-          image: first.picUrlFull ?? '',
+          url: first.itemId ? `https://item.taobao.com/item.htm?id=${first.itemId}` : '',
+          image: first.picUrl ? `https://img.alicdn.com/imgextra/${first.picUrl}` : '',
           shop: first.shopName ?? '',
         };
       }

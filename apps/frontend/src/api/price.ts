@@ -6,7 +6,6 @@ import type {
   MonitorItem,
   MonitorProduct,
   MonitorStats,
-  SearchResult,
 } from '@department-tools/types/price'
 import { apiClient } from './client'
 
@@ -41,9 +40,4 @@ export async function getMonitorStats(): Promise<MonitorStats> {
   return data as MonitorStats
 }
 
-export type { MonitorItem, MonitorProduct, MonitorStats, SearchResult }
-
-export async function searchCompare(productId: number): Promise<SearchResult> {
-  const { data } = await apiClient.get(`/api/price/search/${productId}`)
-  return data as SearchResult
-}
+export type { MonitorItem, MonitorProduct, MonitorStats }
