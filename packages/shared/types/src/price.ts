@@ -6,6 +6,7 @@ export interface MonitorItem {
   id: number
   platform: string
   url: string
+  image: string
   currentPrice: number
   targetPrice: number
   diff: number
@@ -15,7 +16,7 @@ export interface MonitorItem {
 
 export interface MonitorProduct {
   id: number
-  name: string
+  keyword: string
   image: string
   items: MonitorItem[]
 }
@@ -34,10 +35,11 @@ export interface SearchItem {
   shop: string
   url: string
   image: string
+  platform: string
 }
 
 export interface SearchResult {
-  itemList: SearchItem[]
+  groups: { platform: string; items: SearchItem[] }[]
   pageSize: number
 }
 
@@ -47,11 +49,10 @@ export interface SearchResult {
 
 export interface MonitorItemIn {
   platform: string
-  url: string
   targetPrice: number
 }
 
 export interface AddMonitorRequest {
-  name?: string
+  keyword: string
   items: MonitorItemIn[]
 }

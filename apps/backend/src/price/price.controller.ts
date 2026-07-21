@@ -31,10 +31,9 @@ export class PriceController {
   ) {
     const items = body.items.map((i) => ({
       platform: i.platform,
-      url: i.url,
       targetPrice: i.targetPrice,
     }));
-    return this.priceService.addMonitor(user.id, body.name || '', items);
+    return this.priceService.addMonitor(user.id, body.keyword || '', items);
   }
 
   @Delete('monitor/product/:productId')

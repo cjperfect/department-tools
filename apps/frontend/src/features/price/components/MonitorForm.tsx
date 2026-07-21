@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
-  Dialog, DialogContent, DialogDescription,
+  Dialog, DialogContent, 
   DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog'
 
@@ -21,14 +21,14 @@ interface MonitorFormProps {
 }
 
 export interface MonitorFormData {
-  name: string
-  platforms: { platform: string; url: string; targetPrice: number }[]
+  keyword: string
+  platforms: { platform: string; targetPrice: number }[]
 }
 
 export function MonitorForm({ open, onOpenChange, onSubmit }: MonitorFormProps) {
-  const [name, setName] = useState('')
+  const [keyword, setKeyword] = useState('')
   const [unifiedPrice, setUnifiedPrice] = useState<number>(0)
-  const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>(['jd', 'taobao'])
+  const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>(['jd', 'taobao', 'dy'])
   const [platformPrices, setPlatformPrices] = useState<Record<string, number>>({})
 
   const handleUnifiedPriceChange = (price: number) => {
@@ -49,23 +49,22 @@ export function MonitorForm({ open, onOpenChange, onSubmit }: MonitorFormProps) 
   }
 
   const canSubmit = useMemo(() => {
-    if (!name.trim() || selectedPlatforms.length === 0) return false
+    if (!keyword.trim() || selectedPlatforms.length === 0) return false
     return selectedPlatforms.every((p) => (platformPrices[p] || 0) > 0)
-  }, [name, selectedPlatforms, platformPrices])
+  }, [keyword, selectedPlatforms, platformPrices])
 
   const handleSubmit = () => {
     onSubmit?.({
-      name: name.trim(),
+      keyword: keyword.trim(),
       platforms: selectedPlatforms.map((p) => ({
         platform: p,
-        url: '',
         targetPrice: platformPrices[p] || 0,
       })),
     })
-    setName('')
+    setKeyword('')
     setUnifiedPrice(0)
     setPlatformPrices({})
-    setSelectedPlatforms(['jd', 'taobao'])
+    setSelectedPlatforms(['jd', 'taobao', 'dy'])
   }
 
   return (
@@ -73,17 +72,14 @@ export function MonitorForm({ open, onOpenChange, onSubmit }: MonitorFormProps) 
       <DialogContent className='max-w-md'>
         <DialogHeader>
           <DialogTitle>添加价格监控</DialogTitle>
-          <DialogDescription>
-            输入产品名称，设置各平台目标价格
-          </DialogDescription>
         </DialogHeader>
         <div className='space-y-4'>
-          <div className='space-y-2'>
-            <Label>产品名称</Label>
+         <div className='space-y-2'>
+            <Label>搜索关键词</Label>
             <Input
-              placeholder='输入产品名称...'
-              value={name}
-              onChange={(e) => setName(e.target.value)}
+              placeholder='输入商品关键词搜索...'
+              value={keyword}
+              onChange={(e) => setKeyword(e.target.value)}
             />
           </div>
 

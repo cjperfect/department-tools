@@ -66,7 +66,7 @@ export class JustOneService {
     const extractors: Record<string, (d: any) => any[]> = {
       taobao: (d) => d.model?.itemList,
       jd: (d) => d.products,
-      dy: (d) => d.promotions,
+      dy: (d) => d.summary_promotions,
     };
 
     const extract = extractors[platform];
@@ -92,37 +92,34 @@ export class JustOneService {
     const items = result.itemList;
 
     switch (platform) {
-      case 'taobao': {
-        const first = items[0];
-        return {
-          name: first.itemName ?? '',
-          price: first.priceYuanDouble ?? 0,
-          url: first.itemId
-            ? `https://item.taobao.com/item.htm?id=${first.itemId}`
-            : '',
-          image: first.picUrlFull ?? '',
-          shop: first.shopName ?? '',
-        };
-      }
       case 'jd': {
         const first = items[0];
         return {
           name: first.title ?? '',
           price: parseFloat(first.price) || 0,
-          url: first.landUrl ?? '',
-          image: first.imageUrl
-            ? (first.imageUrl.startsWith('http') ? first.imageUrl : `https:${first.imageUrl}`)
-            : '',
+          url: first.click ?? '',
+          image: first.imageUrl,
+          shop: first.shopName ?? '',
+        };
+      }
+      case 'taobao': {
+        const first = items[0];
+        return {
+          name: first.itemName ?? '',
+          price: first.priceYuanDouble ?? 0,
+          url: '',
+          image: first.picUrlFull ?? '',
           shop: first.shopName ?? '',
         };
       }
       case 'dy': {
         const first = items[0];
         const baseModel = first.base_model ?? {};
-        const priceDesc = baseModel.marketing_info?.price_desc?.price;
+        const price = baseModel.marketing_info?.price_desc?.price;
+        const priceStr = price ? `${price.integer ?? 0}.${price.decimal ?? 0}` : '0';
         return {
           name: baseModel.product_info?.name ?? '',
-          price: priceDesc ? priceDesc.origin / 100 : 0,
+          price: parseFloat(priceStr) || 0,
           url: baseModel.product_info?.detail_url ?? '',
           image: baseModel.product_info?.main_img?.url_list?.[0] ?? '',
           shop: baseModel.shop_info?.shop_name ?? '',

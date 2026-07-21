@@ -33,7 +33,7 @@ export class PriceService {
       }
       return {
         id: p.id,
-        name: p.name,
+        keyword: p.keyword,
         image: p.image,
         items: Object.values(best).sort(
           (a: any, b: any) => a.currentPrice - b.currentPrice,
@@ -49,7 +49,6 @@ export class PriceService {
     name: string,
     itemsData: Array<{
       platform: string;
-      url: string;
       targetPrice: number;
     }>,
   ) {
@@ -59,51 +58,49 @@ export class PriceService {
     const product = await this.prisma.monitorProduct.create({
       data: {
         user_id: userId,
-        name: productName,
+        keyword: productName,
         image: this.guessIcon(productName),
       },
     });
 
-    // 收集第一个 API 返回的图片，用于覆盖 emoji icon
     let apiImage = '';
 
     for (const itemData of itemsData) {
-      let currentPrice = 0;
-      let url = itemData.url || '';
-      let image = '';
-
-      const justoneKey = itemData.platform;
-
-      if (justoneKey) {
-        try {
-          const first = await this.justone.searchFirstProduct(justoneKey, productName);
-          if (first) {
-            currentPrice = first.price;
-            if (first.url) url = first.url;
-            if (first.image) image = first.image;
-          }
-        } catch {
-          // API 调用失败静默 fallback，price/url/image 保持默认值
-        }
-      }
-
       const target = itemData.targetPrice;
-      const diff = currentPrice - target;
-      const status = currentPrice > 0 && currentPrice <= target ? 1 : 0;
+      const platform = itemData.platform;
 
-      if (image && !apiImage) apiImage = image;
+      if (!platform) continue;
 
-      await this.prisma.monitorItem.create({
-        data: {
-          product_id: product.id,
-          platform: itemData.platform,
-          url,
-          current_price: currentPrice,
-          target_price: target,
-          diff,
-          status,
-        },
-      });
+      try {
+        const result = await this.justone.searchProducts(platform, productName);
+        if (result?.itemList?.length) {
+          const formatted = this.formatSearchItems(
+            result.itemList.map((item: any) => ({ ...item, _platform: platform })),
+          )
+
+          for (const item of formatted) {
+            const diff = item.price - target;
+            const status = item.price > 0 && item.price <= target ? 1 : 0;
+
+            if (item.image && !apiImage) apiImage = item.image;
+
+            await this.prisma.monitorItem.create({
+              data: {
+                product_id: product.id,
+                platform,
+                url: item.url,
+                image: item.image,
+                current_price: item.price,
+                target_price: target,
+                diff,
+                status,
+              },
+            });
+          }
+        }
+      } catch {
+        // API 调用失败静默 fallback
+      }
     }
 
     // 用 API 返回的真实图片替换 emoji
@@ -188,41 +185,103 @@ export class PriceService {
   async searchCompare(userId: number, productId: number) {
     const product = await this.prisma.monitorProduct.findFirst({
       where: { id: productId, user_id: userId },
+      include: { items: true },
     });
 
     if (!product) {
-      return { itemList: [], pageSize: 0 };
+      return { groups: [], pageSize: 0 };
     }
 
-    // 尝试通过 JustOne API 搜索真实数据
-    if (this.justone.isAvailable) {
-      const result = await this.justone.searchProducts('taobao', product.name);
-      if (result?.itemList?.length) {
-        const itemList = result.itemList.map((item: any) => ({
-          name: item.itemName || '',
-          price: item.priceYuanDouble ?? 0,
-          shop: item.shopName || '',
-          url: `https://item.taobao.com/item.htm?id=${item.itemId}`,
-          image: item.picUrlFull || '',
-        }));
-        return { itemList, pageSize: itemList.length };
+    // 拿到产品下所有监控平台的去重列表
+    const platforms = [...new Set(product.items.map((it) => it.platform))];
+    const allItems: any[] = [];
+
+    for (const platform of platforms) {
+      if (this.justone.isAvailable) {
+        try {
+          const result = await this.justone.searchProducts(platform, product.keyword);
+          if (result?.itemList?.length) {
+            for (const item of result.itemList) {
+              allItems.push({ ...item, _platform: platform });
+            }
+          }
+        } catch {
+          // 单个平台失败继续搜下一个
+        }
       }
     }
 
-    // 兜底：读取 mock 数据
-    const filePath = path.resolve(__dirname, '../../../../testApi/mock/taobao_search.json');
-    const raw = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
-    const model = raw?.data?.model;
-    const itemList = (model?.itemList || []).map((item: any) => ({
-      name: item.itemName || '',
-      price: item.priceYuanDouble ?? 0,
-      shop: item.shopName || '',
-      url: `https://item.taobao.com/item.htm?id=${item.itemId}`,
-      image: item.picUrlFull || '',
-    }));
-    const pageSize = model?.page?.pageSize ?? 10;
+    // JustOne API 没返回结果时，用 mock 兜底
+    if (!allItems.length) {
+      const filePath = path.resolve(__dirname, '../../../../testApi/mock/taobao_search.json');
+      const raw = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+      const model = raw?.data?.model;
+      const mockItems = (model?.itemList || []).map((item: any) => ({
+        ...item, _platform: 'taobao',
+      }));
+      const formatted = this.formatSearchItems(mockItems);
+      return { groups: this.groupByPlatform(formatted), pageSize: formatted.length };
+    }
 
-    return { itemList, pageSize };
+    const formatted = this.formatSearchItems(allItems);
+    return { groups: this.groupByPlatform(formatted), pageSize: formatted.length };
+  }
+
+  private groupByPlatform(items: any[]) {
+    const map = new Map<string, any[]>();
+    for (const item of items) {
+      const list = map.get(item.platform) || [];
+      list.push(item);
+      map.set(item.platform, list);
+    }
+    return [...map.entries()].map(([platform, items]) => ({
+      platform,
+      items: items.sort((a: any, b: any) => a.price - b.price),
+    }));
+  }
+
+  private formatSearchItems(items: any[]) {
+    return items.map((item: any) => {
+      const platform = item._platform || 'taobao';
+      switch (platform) {
+        case 'taobao':
+          return {
+            name: item.itemName || '',
+            price: item.priceYuanDouble ?? 0,
+            shop: item.shopName || '',
+            url: '',
+            image: item.picUrlFull || '',
+            platform,
+          };
+        case 'jd':
+          return {
+            name: item.title || '',
+            price: parseFloat(item.price) || 0,
+            shop: item.shopName || '',
+            url: item.click || '',
+            image: item.imageUrl?.startsWith('http') ? item.imageUrl : `https:${item.imageUrl}` || '',
+            platform,
+          };
+        case 'dy': {
+          const baseModel = item.base_model ?? {};
+          const price = baseModel.marketing_info?.price_desc?.price;
+          const priceStr = price ? `${price.integer ?? 0}.${price.decimal ?? 0}` : '0';
+          return {
+            name: baseModel.product_info?.name || '',
+            price: parseFloat(priceStr) || 0,
+            shop: baseModel.shop_info?.shop_name || '',
+            url: baseModel.product_info?.detail_url || '',
+            image: baseModel.product_info?.main_img?.url_list?.[0] || '',
+            platform,
+          };
+        }
+        default:
+          return {
+            name: '', price: 0, shop: '', url: '', image: '',
+            platform,
+          };
+      }
+    });
   }
 
   // 占位端点
@@ -245,7 +304,7 @@ export class PriceService {
     });
     return {
       id: product!.id,
-      name: product!.name,
+      keyword: product!.keyword,
       image: product!.image,
       items: product!.items.map((i) => this.itemToDict(i)),
     };
@@ -256,6 +315,7 @@ export class PriceService {
       id: item.id,
       platform: item.platform,
       url: item.url,
+      image: item.image,
       currentPrice: item.current_price,
       targetPrice: item.target_price,
       diff: item.diff,

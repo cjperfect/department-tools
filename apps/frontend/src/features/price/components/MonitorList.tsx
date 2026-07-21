@@ -16,12 +16,13 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
 import { MonitorForm, type MonitorFormData } from './MonitorForm'
+import { ImageViewer } from '@/components/ImageViewer'
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle,
 } from '@/components/ui/sheet'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import {
-  addMonitor, deleteProduct, deleteItem,
+  addMonitor, getMonitorList, deleteProduct, deleteItem,
   refreshItem,
   searchCompare, type SearchResult,
   type MonitorProduct,
@@ -84,14 +85,16 @@ export function MonitorList({ products, setProducts, loading }: Props) {
 
   const handleAdd = async (data: MonitorFormData) => {
     try {
-      const product = await addMonitor({
-        name: data.name,
+      await addMonitor({
+        keyword: data.keyword,
         items: data.platforms
           .filter((p) => p.targetPrice > 0)
-          .map((p) => ({ platform: p.platform, url: p.url, targetPrice: p.targetPrice })),
+          .map((p) => ({ platform: p.platform, targetPrice: p.targetPrice })),
       })
-      setProducts((prev) => [product, ...prev])
-      toast.success(`已添加「${product.name}」`)
+      const list = await getMonitorList()
+      setProducts(list)
+      setFormOpen(false)
+      toast.success(`已添加「${data.keyword}」`)
     } catch (err) {
       toast.error(err instanceof Error ? err.message : '添加失败')
     }
@@ -138,7 +141,7 @@ export function MonitorList({ products, setProducts, loading }: Props) {
       const succeeded = results.filter((r) => r.status === 'fulfilled').length
       const failed = results.filter((r) => r.status === 'rejected').length
       if (failed === 0) {
-        toast.success(`已刷新「${product.name}」全部 ${succeeded} 条价格`)
+        toast.success(`已刷新「${product.keyword}」全部 ${succeeded} 条价格`)
       } else {
         toast.warning(`刷新完成：${succeeded} 条成功，${failed} 条失败`)
       }
@@ -266,11 +269,11 @@ export function MonitorList({ products, setProducts, loading }: Props) {
                 <ProductCard
                   key={product.id}
                   product={product}
-                  onDeleteProduct={() => setDeleteInfo({ productId: product.id, label: product.name })}
+                  onDeleteProduct={() => setDeleteInfo({ productId: product.id, label: product.keyword })}
                   onDeleteItem={(itemId, label) => setDeleteInfo({ itemId, label })}
                   onRefreshItem={(itemId) => handleRefreshItem(itemId)}
                   onRefreshProduct={() => handleRefreshProduct(product.id)}
-                  onSearch={() => handleSearch(product.id, product.name)}
+                  onSearch={() => handleSearch(product.id, product.keyword)}
                   searchLoading={searchLoading}
                   refreshLoading={refreshLoading}
                 />
@@ -303,12 +306,24 @@ export function MonitorList({ products, setProducts, loading }: Props) {
             <div className='px-4'>
               {!searchResults ? (
                 <p className='text-sm text-muted-foreground text-center py-8'>搜索中...</p>
-              ) : searchResults.itemList.length === 0 ? (
+              ) : searchResults.groups.length === 0 ? (
                 <p className='text-sm text-muted-foreground text-center py-8'>暂无结果</p>
               ) : (
-                <div className='grid grid-cols-1 sm:grid-cols-2 gap-3'>
-                  {searchResults.itemList.map((item, idx) => (
-                    <SearchItemCard key={idx} item={item} />
+                <div className='space-y-6'>
+                  {searchResults.groups.map((group) => (
+                    <div key={group.platform}>
+                      <h4 className='text-sm font-semibold mb-3 flex items-center gap-2'>
+                        <Badge className={`text-xs ${PLATFORM_COLORS[group.platform] || ''}`}>
+                          {PLATFORM_LABELS[group.platform] || group.platform}
+                        </Badge>
+                        <span className='text-muted-foreground'>{group.items.length} 个商品</span>
+                      </h4>
+                      <div className='grid grid-cols-1 sm:grid-cols-2 gap-3'>
+                        {group.items.map((item, idx) => (
+                          <SearchItemCard key={idx} item={item} />
+                        ))}
+                      </div>
+                    </div>
                   ))}
                 </div>
               )}
@@ -324,18 +339,22 @@ export function MonitorList({ products, setProducts, loading }: Props) {
 // 比价结果卡片
 // ====================================================================
 
-function SearchItemCard({ item }: { item: SearchResult['itemList'][number] }) {
+function SearchItemCard({ item }: { item: SearchResult['groups'][number]['items'][number] }) {
   return (
     <div className='flex items-center gap-3 rounded-lg border p-3 text-sm hover:bg-muted/50 transition-colors'>
-      <img
+      <ImageViewer
         src={item.image}
         alt={item.name}
-        className='size-12 rounded object-cover shrink-0 bg-muted'
-        loading='lazy'
+        className='size-12 rounded shrink-0 bg-muted'
       />
       <div className='flex-1 min-w-0'>
-        <p className='font-medium truncate text-xs'>{item.name}</p>
-        <p className='text-xs text-muted-foreground'>{item.shop}</p>
+        <div className='flex items-center gap-2'>
+          <Badge className={`shrink-0 text-[10px] px-1.5 py-0 ${PLATFORM_COLORS[item.platform] || ''}`}>
+            {PLATFORM_LABELS[item.platform] || item.platform}
+          </Badge>
+          <p className='font-medium truncate text-xs'>{item.name}</p>
+        </div>
+        <p className='text-xs text-muted-foreground mt-0.5'>{item.shop}</p>
       </div>
       <span className='font-mono font-bold text-red-600 shrink-0 text-sm'>
         ¥{item.price}
@@ -378,12 +397,12 @@ function ProductCard({
       <div className='flex items-center justify-between px-4 py-3'>
         <div className='flex items-center gap-3'>
           {product.image.startsWith('http') ? (
-            <img src={product.image} alt={product.name} className='size-8 rounded object-cover' />
+            <ImageViewer src={product.image} alt={product.keyword} className='size-8 rounded' />
           ) : (
             <span className='text-2xl'>{product.image}</span>
           )}
           <div>
-            <h3 className='font-medium text-sm'>{product.name}</h3>
+            <h3 className='font-medium text-sm'>{product.keyword}</h3>
             <p className='text-xs text-muted-foreground'>
               {product.items.length} 个平台
               {triggeredCount > 0 && (
@@ -475,7 +494,7 @@ function ProductCard({
               <TooltipTrigger asChild>
                 <Button variant='ghost' size='icon'
                   className='shrink-0 size-6 text-muted-foreground hover:text-red-500'
-                  onClick={() => onDeleteItem(item.id, `${product.name} - ${item.platform}`)}>
+                  onClick={() => onDeleteItem(item.id, `${product.keyword} - ${item.platform}`)}>
                   <Trash2 className='size-3' />
                 </Button>
               </TooltipTrigger>

@@ -3,19 +3,13 @@ import {
   IsNumber,
   IsArray,
   ValidateNested,
-  MinLength,
   Min,
-  IsOptional,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class MonitorItemIn {
   @IsString()
   platform: string;
-
-  @IsString()
-  @IsOptional()
-  url: string;
 
   @IsNumber()
   @Min(0)
@@ -24,8 +18,7 @@ export class MonitorItemIn {
 
 export class AddMonitorRequest {
   @IsString()
-  @IsOptional()
-  name?: string;
+  keyword: string;
 
   @IsArray()
   @ValidateNested({ each: true })

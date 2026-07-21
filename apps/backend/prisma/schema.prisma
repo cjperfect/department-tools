@@ -82,7 +82,7 @@ model RawData {
 model MonitorProduct {
   id         Int      @id @default(autoincrement())
   user_id    Int
-  name       String   @db.VarChar(512)
+  keyword    String   @db.VarChar(512)
   image      String   @default("📦") @db.VarChar(768)
   created_at DateTime @default(now())
 
@@ -97,6 +97,7 @@ model MonitorItem {
   product_id    Int
   platform      String   @db.VarChar(32)
   url           String   @db.VarChar(768)
+  image         String   @default("") @db.VarChar(768)
   current_price Float
   target_price  Float
   diff          Float    @default(0)

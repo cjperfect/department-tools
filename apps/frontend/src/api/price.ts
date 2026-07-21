@@ -16,8 +16,8 @@ export async function getMonitorList(): Promise<MonitorProduct[]> {
 }
 
 export async function addMonitor(params: {
-  name: string
-  items: { platform: string; url: string; targetPrice: number }[]
+  keyword: string
+  items: { platform: string; targetPrice: number }[]
 }): Promise<MonitorProduct> {
   const { data } = await apiClient.post('/api/price/monitor', params)
   return data as MonitorProduct
