@@ -5,7 +5,6 @@ import {
   Delete,
   Body,
   Param,
-  Query,
   ParseIntPipe,
   UseGuards,
 } from '@nestjs/common';
@@ -60,6 +59,14 @@ export class PriceController {
   @Post('monitor/refresh/:itemId')
   async refreshItem(@Param('itemId', ParseIntPipe) itemId: number) {
     return this.priceService.refreshItem(itemId);
+  }
+
+  @Post('monitor/refresh-product/:productId')
+  async refreshProduct(
+    @CurrentUser() user: any,
+    @Param('productId', ParseIntPipe) productId: number,
+  ) {
+    return this.priceService.refreshProduct(user.id, productId);
   }
 
 }

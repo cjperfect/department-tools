@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { JustOneService } from '../justone/justone.service';
+import { guessIcon } from '../utils/product-icon';
 
 @Injectable()
 export class PriceService {
@@ -24,6 +25,7 @@ export class PriceService {
       id: p.id,
       keyword: p.keyword,
       image: p.image,
+      createdAt: p.created_at,
       items: p.items.map((it) => this.itemToDict(it)),
     }));
   }
@@ -31,10 +33,7 @@ export class PriceService {
   async addMonitor(
     userId: number,
     name: string,
-    itemsData: Array<{
-      platform: string;
-      targetPrice: number;
-    }>,
+    itemsData: Array<{ platform: string; targetPrice: number }>,
   ) {
     if (!itemsData.length) throw new BadRequestException('至少选择一个平台');
 
@@ -43,33 +42,38 @@ export class PriceService {
       data: {
         user_id: userId,
         keyword: productName,
-        image: this.guessIcon(productName),
+        image: guessIcon(productName),
+        configs: itemsData,
       },
     });
 
-    let apiImage = '';
+    await this.populateItems(product.id, productName, itemsData);
+    return await this.loadProduct(product.id);
+  }
 
+  private async populateItems(
+    productId: number,
+    keyword: string,
+    itemsData: Array<{ platform: string; targetPrice: number }>,
+  ) {
     for (const itemData of itemsData) {
       const target = itemData.targetPrice;
       const platform = itemData.platform;
-
       if (!platform) continue;
 
       try {
-        const result = await this.justone.searchProducts(platform, productName);
+        const result = await this.justone.searchProducts(platform, keyword);
         if (result?.itemList?.length) {
           const formatted = this.formatSearchItems(
             result.itemList.map((item: any) => ({ ...item, _platform: platform })),
-          ).slice(0, 10)
+          );
 
           for (const item of formatted) {
             const diff = item.price - target;
 
-            if (item.image && !apiImage) apiImage = item.image;
-
             await this.prisma.monitorItem.create({
               data: {
-                product_id: product.id,
+                product_id: productId,
                 platform,
                 name: item.name,
                 shop_name: item.shop,
@@ -86,45 +90,54 @@ export class PriceService {
         // API 调用失败静默 fallback
       }
     }
-
-    // 用 API 返回的真实图片替换 emoji
-    if (apiImage) {
-      await this.prisma.monitorProduct.update({
-        where: { id: product.id },
-        data: { image: apiImage },
-      });
-    }
-
-    return await this.loadProduct(product.id);
   }
 
-  async deleteProduct(userId: number, productId: number) {
+  async refreshAll(userId: number) {
+    const products = await this.prisma.monitorProduct.findMany({
+      where: { user_id: userId },
+    });
+    for (const product of products) {
+      const itemsData = (product.configs as any[]) || [];
+      await this.prisma.monitorProduct.deleteMany({
+        where: { id: product.id, user_id: userId },
+      });
+      await this.prisma.monitorItem.deleteMany({
+        where: { product_id: product.id },
+      });
+      await this.addMonitor(userId, product.keyword, itemsData);
+    }
+    return null;
+  }
+
+  async refreshProduct(userId: number, productId: number) {
     const product = await this.prisma.monitorProduct.findFirst({
       where: { id: productId, user_id: userId },
     });
     if (!product) throw new NotFoundException('记录不存在');
-    await this.prisma.monitorProduct.delete({ where: { id: productId } });
+
+    const itemsData = (product.configs as any[]) || [];
+    await this.prisma.monitorProduct.deleteMany({
+      where: { id: productId, user_id: userId },
+    });
+    await this.prisma.monitorItem.deleteMany({
+      where: { product_id: productId },
+    });
+    await this.addMonitor(userId, product.keyword, itemsData);
+    return null;
+  }
+
+  async deleteProduct(userId: number, productId: number) {
+    await this.prisma.monitorProduct.deleteMany({
+      where: { id: productId, user_id: userId },
+    });
     return null;
   }
 
   async deleteItem(userId: number, itemId: number) {
-    const item = await this.prisma.monitorItem.findFirst({
-      where: { id: itemId },
-      include: { product: true },
+    const result = await this.prisma.monitorItem.deleteMany({
+      where: { id: itemId, product: { user_id: userId } },
     });
-    if (!item || item.product.user_id !== userId) {
-      throw new NotFoundException('记录不存在');
-    }
-    const productId = item.product_id;
-    await this.prisma.monitorItem.delete({ where: { id: itemId } });
-
-    // 检查产品是否还有平台项
-    const remaining = await this.prisma.monitorItem.count({
-      where: { product_id: productId },
-    });
-    if (remaining === 0) {
-      await this.prisma.monitorProduct.delete({ where: { id: productId } });
-    }
+    if (result.count === 0) throw new NotFoundException('记录不存在');
     return null;
   }
 
@@ -148,16 +161,46 @@ export class PriceService {
   async refreshItem(itemId: number) {
     const item = await this.prisma.monitorItem.findUnique({
       where: { id: itemId },
+      include: { product: true },
     });
     if (!item) throw new NotFoundException('记录不存在');
+    return this.refreshOneItem(item);
+  }
 
+  private async refreshOneItem(item: any) {
+    try {
+      const result = await this.justone.searchProducts(item.platform, item.product.keyword);
+      if (result?.itemList?.length) {
+        const formatted = this.formatSearchItems(
+          result.itemList.map((it: any) => ({ ...it, _platform: item.platform })),
+        );
+        const latest = formatted[0];
+        if (latest) {
+          const diff = latest.price - item.target_price;
+          await this.prisma.monitorItem.update({
+            where: { id: item.id },
+            data: {
+              name: latest.name,
+              shop_name: latest.shop,
+              url: latest.url,
+              image: latest.image,
+              current_price: latest.price,
+              diff,
+            },
+          });
+          return this.itemToDict({ ...item, ...latest, current_price: latest.price, diff });
+        }
+      }
+    } catch {
+      // API 调用失败静默 fallback
+    }
+
+    // fallback: 仅重新计算 diff
     const diff = item.current_price - item.target_price;
-
     await this.prisma.monitorItem.update({
-      where: { id: itemId },
+      where: { id: item.id },
       data: { diff },
     });
-
     return this.itemToDict({ ...item, diff });
   }
 
@@ -218,6 +261,7 @@ export class PriceService {
       id: product!.id,
       keyword: product!.keyword,
       image: product!.image,
+      createdAt: product!.created_at,
       items: product!.items.map((i) => this.itemToDict(i)),
     };
   }
@@ -234,18 +278,5 @@ export class PriceService {
       targetPrice: item.target_price,
       diff: item.diff,
     };
-  }
-
-  private guessIcon(name: string): string {
-    const icons: Record<string, string> = {
-      '耳机': '🎧', '手机': '📱', '电脑': '💻', '笔记本': '💻',
-      '显示器': '🖥️', '键盘': '⌨️', '鼠标': '🖱️',
-      '手表': '⌚', '音箱': '🔊', '相机': '📷', '游戏': '🎮',
-      '咖啡': '☕', '鞋': '👟', '衣服': '👕', '包': '🎒',
-    };
-    for (const [kw, icon] of Object.entries(icons)) {
-      if (name.includes(kw)) return icon;
-    }
-    return '📦';
   }
 }

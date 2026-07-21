@@ -18,7 +18,7 @@ import { MonitorForm, type MonitorFormData } from './MonitorForm'
 import { ImageViewer } from '@/components/ImageViewer'
 import {
   addMonitor, getMonitorList, deleteProduct, deleteItem,
-  refreshItem,
+  refreshProduct,
   type MonitorProduct,
   type MonitorItem,
 } from '@/api/price'
@@ -94,52 +94,27 @@ export function MonitorList({ products, setProducts, loading }: Props) {
   }
 
   const handleAdd = async (data: MonitorFormData) => {
-    try {
-      await addMonitor({
-        keyword: data.keyword,
-        items: data.platforms
-          .filter((p) => p.targetPrice > 0)
-          .map((p) => ({ platform: p.platform, targetPrice: p.targetPrice })),
-      })
-      const list = await getMonitorList()
-      setProducts(list)
-      setFormOpen(false)
-      toast.success(`已添加「${data.keyword}」`)
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : '添加失败')
-    }
+    await addMonitor({
+      keyword: data.keyword,
+      items: data.platforms
+        .filter((p) => p.targetPrice > 0)
+        .map((p) => ({ platform: p.platform, targetPrice: p.targetPrice })),
+    })
+    const list = await getMonitorList()
+    setProducts(list)
+    setFormOpen(false)
+    toast.success(`已添加「${data.keyword}」`)
   }
 
   const handleRefreshProduct = async (productId: number) => {
-    const product = products.find((p) => p.id === productId)
-    if (!product) return
     setRefreshLoading(productId)
     try {
-      const results = await Promise.allSettled(
-        product.items.map((it) => refreshItem(it.id))
-      )
-      setProducts((prev) =>
-        prev.map((p) => {
-          if (p.id !== productId) return p
-          return {
-            ...p,
-            items: p.items.map((it, i) => {
-              const result = results[i]
-              if (result.status === 'fulfilled') {
-                return { ...it, ...result.value }
-              }
-              return it
-            }),
-          }
-        })
-      )
-      const succeeded = results.filter((r) => r.status === 'fulfilled').length
-      const failed = results.filter((r) => r.status === 'rejected').length
-      if (failed === 0) {
-        toast.success(`已刷新「${product.keyword}」全部 ${succeeded} 条价格`)
-      } else {
-        toast.warning(`刷新完成：${succeeded} 条成功，${failed} 条失败`)
-      }
+      await refreshProduct(productId)
+      const list = await getMonitorList()
+      setProducts(list)
+      toast.success('已刷新')
+    } catch {
+      toast.error('刷新失败')
     } finally {
       setRefreshLoading(null)
     }
@@ -174,28 +149,8 @@ export function MonitorList({ products, setProducts, loading }: Props) {
     const run = async () => {
       const start = Date.now()
       const current = productsRef.current
-      if (current.length > 0) {
-        const allItems = current.flatMap((p) =>
-          p.items.map((it) => ({ itemId: it.id }))
-        )
-        const results = await Promise.allSettled(
-          allItems.map(({ itemId }) => refreshItem(itemId))
-        )
-        setProducts((prev) => {
-          const updates = new Map<number, MonitorItem>()
-          results.forEach((result, i) => {
-            if (result.status === 'fulfilled') {
-              updates.set(allItems[i].itemId, result.value)
-            }
-          })
-          return prev.map((p) => ({
-            ...p,
-            items: p.items.map((it) => {
-              const u = updates.get(it.id)
-              return u ? { ...it, ...u } : it
-            }),
-          }))
-        })
+      for (const p of current) {
+        await handleRefreshProduct(p.id)
       }
       // 减去本次执行耗时，补偿漂移
       const elapsed = Date.now() - start
@@ -354,6 +309,9 @@ function ProductCard({
             <h3 className='font-medium text-base'>{product.keyword}</h3>
             <p className='text-sm text-muted-foreground'>
               {groups.length} 个平台 · {product.items.length} 条记录
+              {product.createdAt && (
+                <span className='ml-2'>添加于 {new Date(product.createdAt).toLocaleString('zh-CN')}</span>
+              )}
             </p>
           </div>
         </div>
@@ -437,12 +395,12 @@ function ProductCard({
                       <Separator />
                       <div className='grid grid-cols-1 sm:grid-cols-2 gap-2 p-2'>
                         {group.items.map((item) => (
-                          <div key={item.id} className='flex items-center gap-2 rounded-md border p-2 text-base'>
+                          <div key={item.id} className='flex items-center gap-2 rounded-md border p-2 text-base hover:bg-muted/30 hover:-translate-y-0.5 hover:shadow-md transition-all duration-200 cursor-pointer'>
                             {/* 商品图片 */}
                             {item.image ? (
-                              <ImageViewer src={item.image} alt={item.name || item.platform} className='size-10 rounded shrink-0 bg-muted' />
+                              <ImageViewer src={item.image} alt={item.name || item.platform} className='size-14 rounded shrink-0 bg-muted' />
                             ) : (
-                              <div className='size-10 rounded shrink-0 bg-muted flex items-center justify-center text-muted-foreground text-sm'>
+                              <div className='size-14 rounded shrink-0 bg-muted flex items-center justify-center text-muted-foreground text-sm'>
                                 无图
                               </div>
                             )}
@@ -457,12 +415,21 @@ function ProductCard({
                               {item.shopName && (
                                 <p className='text-sm text-muted-foreground truncate'>{item.shopName}</p>
                               )}
-                              <div className='flex items-center gap-2 text-sm'>
-                                <span className='font-mono font-medium'>¥{item.currentPrice.toLocaleString()}</span>
-                                <span className='text-muted-foreground'>→ ¥{item.targetPrice.toLocaleString()}</span>
-                                <span className={`font-mono ${item.diff <= 0 ? 'text-green-600' : 'text-red-500'}`}>
-                                  {item.diff > 0 ? '+' : ''}¥{Math.abs(item.diff).toLocaleString()}
-                                </span>
+                              <div className='grid grid-cols-3 gap-1 text-sm'>
+                                <div>
+                                  <span className='text-muted-foreground text-xs'>当前价</span>
+                                  <span className='font-mono font-medium block'>¥{item.currentPrice.toLocaleString()}</span>
+                                </div>
+                                <div>
+                                  <span className='text-muted-foreground text-xs'>目标价</span>
+                                  <span className='font-mono block'>¥{item.targetPrice.toLocaleString()}</span>
+                                </div>
+                                <div>
+                                  <span className='text-muted-foreground text-xs'>相差</span>
+                                  <span className={`font-mono block ${item.diff <= 0 ? 'text-green-600' : 'text-red-500'}`}>
+                                    {item.diff > 0 ? '+' : '-'}¥{Math.abs(item.diff).toLocaleString()}
+                                  </span>
+                                </div>
                               </div>
                             </div>
 

@@ -17,7 +17,7 @@ const PLATFORM_OPTIONS = [
 interface MonitorFormProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  onSubmit?: (data: MonitorFormData) => void
+  onSubmit?: (data: MonitorFormData) => Promise<void>
 }
 
 export interface MonitorFormData {
@@ -30,6 +30,7 @@ export function MonitorForm({ open, onOpenChange, onSubmit }: MonitorFormProps) 
   const [unifiedPrice, setUnifiedPrice] = useState<number>(0)
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>(['jd', 'taobao', 'dy'])
   const [platformPrices, setPlatformPrices] = useState<Record<string, number>>({})
+  const [submitting, setSubmitting] = useState(false)
 
   const handleUnifiedPriceChange = (price: number) => {
     setUnifiedPrice(price)
@@ -53,18 +54,26 @@ export function MonitorForm({ open, onOpenChange, onSubmit }: MonitorFormProps) 
     return selectedPlatforms.every((p) => (platformPrices[p] || 0) > 0)
   }, [keyword, selectedPlatforms, platformPrices])
 
-  const handleSubmit = () => {
-    onSubmit?.({
-      keyword: keyword.trim(),
-      platforms: selectedPlatforms.map((p) => ({
-        platform: p,
-        targetPrice: platformPrices[p] || 0,
-      })),
-    })
-    setKeyword('')
-    setUnifiedPrice(0)
-    setPlatformPrices({})
-    setSelectedPlatforms(['jd', 'taobao', 'dy'])
+  const handleSubmit = async () => {
+    if (!onSubmit) return
+    setSubmitting(true)
+    try {
+      await onSubmit({
+        keyword: keyword.trim(),
+        platforms: selectedPlatforms.map((p) => ({
+          platform: p,
+          targetPrice: platformPrices[p] || 0,
+        })),
+      })
+      setKeyword('')
+      setUnifiedPrice(0)
+      setPlatformPrices({})
+      setSelectedPlatforms(['jd', 'taobao', 'dy'])
+    } catch {
+      // 失败时保留表单数据
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (
@@ -128,7 +137,7 @@ export function MonitorForm({ open, onOpenChange, onSubmit }: MonitorFormProps) 
           <Button variant='outline' onClick={() => onOpenChange(false)}>
             取消
           </Button>
-          <Button onClick={handleSubmit} disabled={!canSubmit}>
+          <Button onClick={handleSubmit} disabled={!canSubmit || submitting}>
             开始监控
           </Button>
         </DialogFooter>

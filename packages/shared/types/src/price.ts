@@ -18,6 +18,7 @@ export interface MonitorProduct {
   id: number
   keyword: string
   image: string
+  createdAt: string
   items: MonitorItem[]
 }
 

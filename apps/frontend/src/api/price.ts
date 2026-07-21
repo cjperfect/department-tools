@@ -35,6 +35,10 @@ export async function refreshItem(itemId: number): Promise<MonitorItem> {
   return data as MonitorItem
 }
 
+export async function refreshProduct(productId: number): Promise<void> {
+  await apiClient.post(`/api/price/monitor/refresh-product/${productId}`)
+}
+
 export async function getMonitorStats(): Promise<MonitorStats> {
   const { data } = await apiClient.get('/api/price/stats')
   return data as MonitorStats
