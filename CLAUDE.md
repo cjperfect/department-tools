@@ -1,66 +1,99 @@
-# CLAUDE.md
-
-此文件为 Claude Code (claude.ai/code) 在此仓库中工作时提供指导。
-
-## 概述
-
-PNPM monorepo，内部部门工具集：竞品分析、价格监控、平台比价、用户/部门/菜单管理。
-
-## 常用命令
-
-```bash
-# 安装依赖
-pnpm install
-
-# 开发
-pnpm dev                  # 前后端同时启动
-pnpm dev:frontend         # Vite 开发服务器 (5173 端口)
-pnpm dev:backend          # NestJS 开发服务器 (8000 端口)
-
-# 数据库操作（在 apps/backend/ 下执行）
-cd apps/backend
-npx prisma generate       # 修改 schema 后重新生成客户端
-npx prisma db push        # 同步 schema 到数据库
-npx prisma db push --accept-data-loss  # 有破坏性变更时强制同步
-pnpm seed                 # 清空并重建测试数据
-```
-
-## 架构
+## 项目结构
 
 ```
-apps/frontend/    @department-tools/frontend   React 19 + Vite + TanStack Router + shadcn/ui
-apps/backend/     @department-tools/backend    NestJS 10 + Prisma + MySQL
-packages/shared/
-  types/          @department-tools/types       共享 TypeScript 接口和常量
-  tsconfig/       @department-tools/tsconfig    base.json → react.json / nest.json
-  eslint-config/  @department-tools/eslint-config  共享 ESLint 配置
+department-tools/
+├── apps/
+│   ├── backend/                # NestJS 后端
+│   │   ├── prisma/             # 数据库 Schema & 迁移
+│   │   ├── seed.ts             # 种子数据
+│   │   └── src/
+│   │       ├── auth/           # 认证模块 (JWT)
+│   │       ├── bidding/        # 招投标分析模块
+│   │       ├── common/         # 公共 Guard/Decorator/Filter/Interceptor
+│   │       ├── departments/    # 部门管理
+│   │       ├── justone/        # JustOne API 封装 (淘宝/京东/抖音搜索)
+│   │       ├── menus/          # 菜单管理
+│   │       ├── price/          # 价格监控模块
+│   │       ├── prisma/         # Prisma 服务
+│   │       ├── users/          # 用户管理
+│   │       └── utils/          # 工具函数
+│   └── frontend/               # React 前端 (Vite + TanStack Router)
+│       └── src/
+│           ├── api/            # API 请求函数（按模块命名）
+│           ├── components/     # 通用组件 (ui/ layout/ data-table/ ImageViewer)
+│           ├── config/         # 应用配置
+│           ├── context/        # React Context
+│           ├── features/       # 功能模块（每个功能含 pages/components/data/api）
+│           │   ├── auth/       # 登录/注册
+│           │   ├── bidding/    # 招投标分析
+│           │   ├── dashboard/  # 首页仪表盘
+│           │   ├── departments/# 部门管理
+│           │   ├── price/      # 价格监控
+│           │   ├── menus/      # 菜单管理
+│           │   └── users/      # 用户管理
+│           ├── hooks/          # 自定义 Hooks
+│           ├── lib/            # 工具库（clsx 封装等）
+│           ├── routes/         # TanStack Router 路由定义
+│           ├── stores/         # 全局状态 (Zustand/Jotai)
+│           └── styles/         # 全局样式
+├── docker/
+│   └── docker-compose.yml      # MySQL 8.0 容器
+├── packages/shared/types/      # 共享 TypeScript 类型
+├── testApi/                    # Mock API 服务器 (开发用)
+├── docs/                       # 设计文档 & 需求说明
+└── pnpm-workspace.yaml         # pnpm monorepo 配置
 ```
 
-### 共享类型 (`packages/shared/types/src/`)
+**技术栈**：React 19 + Vite + TanStack Router + shadcn/ui + NestJS + Prisma + MySQL 8.0 + pnpm monorepo
 
-前后端共用的 API 请求/响应类型。通过 `@department-tools/types` 导入，支持子路径：`./auth`、`./bidding`、`./price`、`./constants`。新增 API 时先在这里定义类型，再在两端实现。
+**测试用 Mock API**：`testApi/server.js` 运行在 `127.0.0.1:3456`，模拟 JustOne 接口返回。如需使用真实 API，修改 `apps/backend/.env` 中 `JUSTONE_BASE_URL` 并重启后端。
 
-### 后端 (`apps/backend/`)
+## 代码风格
 
-- **NestJS 模块**：`auth/`、`bidding/`、`price/`、`departments/`、`menus/`，每个模块含 controller + service + DTO
-- **`PrismaModule` 是 `@Global()`**，直接注入 `PrismaService` 即可，无需每个模块单独导入
-- **权限守卫**：`@UseGuards(JwtAuthGuard)` 验证登录，`@UseGuards(JwtAuthGuard, RolesGuard) + @Roles('admin')` 限制管理员
-- **`@Roles('admin')`** 表示 admin 或 super_admin 均可访问（通过 `getRoleLevel()` 判断）
-- **角色层级**：`super_admin(3) > admin(2) > user(1)`，上级可管理下级，但不能操作自己
-- **响应格式**：`{ code: 0, message: 'ok', data: ... }`，`ResponseInterceptor` 自动包裹，`code !== 0` 表示业务错误
-- **数据库**：MySQL + Prisma ORM。schema 变更后需执行 `prisma generate`。`pnpm seed` 可重置并填充测试数据
+- 注释仅使用中文
+- 优先使用函数式编程和 React Hooks
+- 组件遵循单一职责原则，每个组件只做一件事
+- 优先使用简单、原生、供应商推荐的解决方案（如 React 官方模式），避免过早抽象
+- 使用 TypeScript 严格模式：对 props、state、返回值、事件处理器使用精确类型；使用 `interface` 定义组件 Props，使用 `type` 定义联合类型和工具类型
+- 运行时验证 API 响应数据：使用 Zod 验证库，要求必需字段，忽略额外字段，优先使用结构化模型而非 `any` 或 `unknown`
+- 在编写新组件或工具函数前检查是否已存在类似逻辑
+- 获取对象属性使用解构
+- 文件命名规范：
+  - 组件文件使用 PascalCase（如 `UserProfile.tsx`）
+  - 工具函数使用 camelCase（如 `formatDate.ts`）
+  - 样式文件与组件同名（如 `UserProfile.module.css`）
+  - 服务层文件使用 `xxx.service.ts` 命名（如 `user.service.ts`、`auth.service.ts`）
+  - 类型定义文件使用 `xxx.types.ts` 命名（如 `user.types.ts`）
+  - 常量文件使用 `xxx.constants.ts` 命名（如 `api.constants.ts`）
 
-### 前端 (`apps/frontend/`)
+## 代码格式化
 
-- **路由**：TanStack Router 文件路由。`routes/_authenticated/` 需要登录。管理路由 (`/users`、`/departments`、`/menus`) 额外检查 localStorage 中的角色
-- **API 层**：`api/client.ts` — Axios 实例，自动携带 JWT，解包响应 (`{code,message,data}` → `data`)，全局错误 toast
-- **状态管理**：Zustand (`stores/auth-store.ts`)，将 token、user、menuData 持久化到 localStorage
-- **UI**：shadcn/ui (Radix + Tailwind)，组件在 `components/ui/`
-- **功能模块模式**：`features/<模块名>/`，包含 `index.tsx`、`api/index.ts`、`components/`。使用 `useQuery`/`useMutation` + `apiClient`
-- **菜单**：登录时从数据库加载，缓存到 localStorage。通过 `/menus` 管理页面管理
+- 项目必须配置prettier作为代码格式化工具
+- 在编写或修改任何代码文件后，必须使用 Prettier 进行格式化，确保代码风格一致
 
-### 关键模式
+## 错误处理
 
-- **新增管理功能**：创建后端模块（Prisma 模型 + NestJS 模块 + DTO）→ 添加共享类型 → 创建前端功能目录 → 添加带 `requireAdmin()` 的路由 → seed 中添加菜单项
-- **错误处理**：Axios 拦截器统一处理 HTTP 错误和业务错误（`code !== 0`），自动 `toast.error()`。各 mutation 只需处理成功逻辑
-- **表单模式**：优先使用 `useState` 手动表单，避免 react-hook-form+zod 的类型问题。参考 `menus-dialogs.tsx` 或 `departments-dialogs.tsx`
+- 始终显式抛出错误，绝不静默忽略
+- 使用自定义错误类（如 ApiError、ValidationError）清晰指示错误类型
+- React 组件中使用 Error Boundaries 捕获渲染错误，提供降级 UI
+- 异步操作（API 调用、事件处理）使用 try/catch 捕获错误，并设置错误状态
+- API 调用使用重试策略（如指数退避），失败时抛出最后一个错误并记录日志
+
+## 状态管理
+
+- 优先使用 React 内置状态管理（useState、useReducer、useContext）
+- 全局状态使用 Zustand
+- 服务端状态使用 TanStack Query，处理缓存、重试、重新验证
+- 表单状态使用 react-hook-form
+- URL 状态使用 React Router 的 useSearchParams 或 Next.js 的 useRouter
+- 状态设计遵循最小化原则：只存储必要数据，派生数据在渲染时计算（使用 useMemo）
+- 避免将组件本地状态提升到全局，除非多处共享
+
+## 库与依赖
+
+- 包管理使用 pnpm
+- 工具库：使用 lodash-es（按需导入）、date-fns（替代 moment.js）、clsx 或 classnames（条件类名）
+- HTTP 客户端：使用 axios 或原生 fetch，配置拦截器处理认证、错误、日志
+- 表单验证：使用 Zod
+- 在项目配置文件中添加或更新依赖，而非手动安装
+- 定期运行 `npm audit` 或 `yarn audit` 修复安全漏洞
