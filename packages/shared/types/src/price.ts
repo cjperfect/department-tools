@@ -14,11 +14,20 @@ export interface MonitorItem {
   diff: number
 }
 
+/** 平台配置信息（包含目标价格） */
+export interface PlatformConfig {
+  platform: string
+  targetPrice: number
+}
+
 export interface MonitorProduct {
   id: number
   keyword: string
   image: string
   createdAt: string
+  /** 所有已配置的监控平台及其目标价格 */
+  platforms: PlatformConfig[]
+  /** 实际有搜索结果的条目（按平台分组） */
   items: MonitorItem[]
 }
 

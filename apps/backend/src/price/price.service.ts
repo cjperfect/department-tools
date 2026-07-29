@@ -26,6 +26,7 @@ export class PriceService {
       keyword: p.keyword,
       image: p.image,
       createdAt: p.created_at,
+      platforms: this.configsToPlatforms(p.configs),
       items: p.items.map((it) => this.itemToDict(it)),
     }));
   }
@@ -252,6 +253,17 @@ export class PriceService {
   // 内部
   // ------------------------------------------------------------------
 
+  /**
+   * 将 configs JSON 转为 platforms 数组，保证前端能展示所有已配置的平台。
+   */
+  private configsToPlatforms(configs: any): { platform: string; targetPrice: number }[] {
+    const items = (configs as any[]) || [];
+    return items.map((c: any) => ({
+      platform: c.platform || '',
+      targetPrice: c.targetPrice ?? 0,
+    }));
+  }
+
   private async loadProduct(productId: number) {
     const product = await this.prisma.monitorProduct.findUnique({
       where: { id: productId },
@@ -262,6 +274,7 @@ export class PriceService {
       keyword: product!.keyword,
       image: product!.image,
       createdAt: product!.created_at,
+      platforms: this.configsToPlatforms(product!.configs),
       items: product!.items.map((i) => this.itemToDict(i)),
     };
   }

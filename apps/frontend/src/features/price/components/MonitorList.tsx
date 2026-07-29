@@ -21,6 +21,7 @@ import {
   refreshProduct,
   type MonitorProduct,
   type MonitorItem,
+  type PlatformConfig,
 } from '@/api/price'
 import { toast } from 'sonner'
 
@@ -221,8 +222,8 @@ export function MonitorList({ products, setProducts, loading }: Props) {
                   product={product}
                   expandedPlatforms={expandedPlatforms}
                   onTogglePlatform={(key) => togglePlatform(key)}
-                  onExpandAll={() => expandAllPlatforms(product.id, [...new Set(product.items.map((it) => it.platform))])}
-                  onCollapseAll={() => collapseAllPlatforms(product.id, [...new Set(product.items.map((it) => it.platform))])}
+                  onExpandAll={() => expandAllPlatforms(product.id, (product.platforms || []).map((p) => p.platform))}
+                  onCollapseAll={() => collapseAllPlatforms(product.id, (product.platforms || []).map((p) => p.platform))}
                   onDeleteProduct={() => setDeleteInfo({ productId: product.id, label: product.keyword })}
                   onDeleteItem={(itemId, label) => setDeleteInfo({ itemId, label })}
                   onRefreshProduct={() => handleRefreshProduct(product.id)}
@@ -251,20 +252,49 @@ export function MonitorList({ products, setProducts, loading }: Props) {
 }
 
 // ====================================================================
-// 辅助：按平台分组
+// 辅助：按平台分组（包含所有已配置平台，无数据的显示为 0 条记录）
 // ====================================================================
 
-function groupByPlatform(items: MonitorItem[]): { platform: string; items: MonitorItem[] }[] {
-  const map = new Map<string, MonitorItem[]>()
+interface PlatformGroup {
+  platform: string
+  targetPrice: number
+  items: MonitorItem[]
+}
+
+function buildPlatformGroups(
+  platforms: PlatformConfig[],
+  items: MonitorItem[],
+): PlatformGroup[] {
+  // 将已有 items 按平台分组
+  const itemMap = new Map<string, MonitorItem[]>()
   for (const item of items) {
-    const list = map.get(item.platform)
+    const list = itemMap.get(item.platform)
     if (list) {
       list.push(item)
     } else {
-      map.set(item.platform, [item])
+      itemMap.set(item.platform, [item])
     }
   }
-  return [...map.entries()].map(([platform, items]) => ({ platform, items }))
+
+  // 以 configurations 中已配置的平台为主
+  const seen = new Set<string>()
+  const groups: PlatformGroup[] = (platforms || []).map((p) => {
+    seen.add(p.platform)
+    return {
+      platform: p.platform,
+      targetPrice: p.targetPrice ?? 0,
+      items: itemMap.get(p.platform) || [],
+    }
+  })
+
+  // 兜底：items 中存在但 configs 中未出现的平台（不应发生，但做安全处理）
+  for (const [platform, platformItems] of itemMap) {
+    if (!seen.has(platform)) {
+      groups.push({ platform, targetPrice: 0, items: platformItems })
+    }
+  }
+
+  return groups
 }
 
 // ====================================================================
@@ -292,7 +322,7 @@ function ProductCard({
   onRefreshProduct: () => void
   refreshLoading: number | null
 }) {
-  const groups = groupByPlatform(product.items)
+  const groups = buildPlatformGroups(product.platforms || [], product.items)
   const allExpanded = groups.every((g) => expandedPlatforms.has(`${product.id}-${g.platform}`))
 
   return (
@@ -393,7 +423,12 @@ function ProductCard({
                   {isExpanded && (
                     <>
                       <Separator />
-                      <div className='grid grid-cols-1 sm:grid-cols-2 gap-2 p-2'>
+                      {group.items.length === 0 ? (
+                        <div className='px-3 py-4 text-center text-sm text-muted-foreground'>
+                          该平台暂无搜索结果
+                        </div>
+                      ) : (
+                        <div className='grid grid-cols-1 sm:grid-cols-2 gap-2 p-2'>
                         {group.items.map((item) => (
                           <div key={item.id} className='flex items-center gap-2 rounded-md border p-2 text-base hover:bg-muted/30 hover:-translate-y-0.5 hover:shadow-md transition-all duration-200 cursor-pointer'>
                             {/* 商品图片 */}
@@ -460,7 +495,8 @@ function ProductCard({
                           </div>
                         ))}
                       </div>
-                    </>
+                    )}
+                  </>
                   )}
                 </div>
               )

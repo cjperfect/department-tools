@@ -44,4 +44,4 @@ export async function getMonitorStats(): Promise<MonitorStats> {
   return data as MonitorStats
 }
 
-export type { MonitorItem, MonitorProduct, MonitorStats }
+export type { MonitorItem, MonitorProduct, MonitorStats, PlatformConfig }
