@@ -35,6 +35,7 @@ async function seed() {
     { title: '首页', url: '/', icon: 'LayoutDashboard', group_id: mainGroup.id, sort_order: 0 },
     { title: '竞品分析', url: '/bidding', icon: 'BarChart3', group_id: mainGroup.id, sort_order: 1 },
     { title: '价格监控', url: '/monitor', icon: 'Eye', group_id: mainGroup.id, sort_order: 2 },
+    { title: '历史价格', url: '/history-price', icon: 'Eye', group_id: mainGroup.id, sort_order: 3 },
     { title: '用户管理', url: '/users', icon: 'Users', group_id: adminGroup.id, sort_order: 0, roles: ['super_admin', 'admin'] },
     { title: '部门管理', url: '/departments', icon: 'Building2', group_id: adminGroup.id, sort_order: 1, roles: ['super_admin', 'admin'] },
     { title: '菜单管理', url: '/menus', icon: 'Settings', group_id: adminGroup.id, sort_order: 2, roles: ['super_admin', 'admin'] },

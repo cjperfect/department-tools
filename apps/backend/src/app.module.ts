@@ -5,6 +5,7 @@ import { JustOneModule } from './justone/justone.module';
 import { AuthModule } from './auth/auth.module';
 import { BiddingModule } from './bidding/bidding.module';
 import { PriceModule } from './price/price.module';
+import { HistoryPriceModule } from './history-price/history-price.module';
 import { DepartmentsModule } from './departments/departments.module';
 import { MenusModule } from './menus/menus.module';
 
@@ -16,6 +17,7 @@ import { MenusModule } from './menus/menus.module';
     AuthModule,
     BiddingModule,
     PriceModule,
+    HistoryPriceModule,
     DepartmentsModule,
     MenusModule,
   ],

@@ -13,7 +13,6 @@
     "prettier-plugin-tailwindcss"
   ],
   "tailwindFunctions": ["cn", "clsx"],
-  "tailwindStylesheet": "./src/styles/index.css",
   "importOrder": [
     "^path$",
     "^vite$",

@@ -9,8 +9,8 @@ CREATE TABLE `users` (
     `must_change_password` BOOLEAN NOT NULL DEFAULT true,
     `status` VARCHAR(20) NOT NULL DEFAULT 'active',
     `is_delete` BOOLEAN NOT NULL DEFAULT false,
-    `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-    `updated_at` DATETIME(3) NOT NULL,
+    `created_at` TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updated_at` TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
 
     UNIQUE INDEX `users_username_key`(`username`),
     UNIQUE INDEX `users_employee_id_key`(`employee_id`),
@@ -35,8 +35,8 @@ CREATE TABLE `analyses` (
     `highlights` JSON NULL,
     `warnings` JSON NULL,
     `gap_opportunities` JSON NULL,
-    `analyzed_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-    `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `analyzed_at` TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `created_at` TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
 
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -48,7 +48,7 @@ CREATE TABLE `analysis_dimensions` (
     `dimension_type` VARCHAR(20) NOT NULL,
     `score` DOUBLE NOT NULL DEFAULT 0,
     `detail` JSON NOT NULL,
-    `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `created_at` TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
 
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -58,7 +58,7 @@ CREATE TABLE `raw_data` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
     `analysis_id` INTEGER NOT NULL,
     `data` JSON NOT NULL,
-    `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `created_at` TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
 
     UNIQUE INDEX `raw_data_analysis_id_key`(`analysis_id`),
     PRIMARY KEY (`id`)
@@ -68,9 +68,10 @@ CREATE TABLE `raw_data` (
 CREATE TABLE `monitor_products` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
     `user_id` INTEGER NOT NULL,
-    `name` VARCHAR(512) NOT NULL,
+    `keyword` VARCHAR(512) NOT NULL,
     `image` VARCHAR(768) NOT NULL DEFAULT '📦',
-    `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `configs` JSON NULL,
+    `created_at` TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
 
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -80,13 +81,15 @@ CREATE TABLE `monitor_items` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
     `product_id` INTEGER NOT NULL,
     `platform` VARCHAR(32) NOT NULL,
+    `name` VARCHAR(512) NOT NULL DEFAULT '',
+    `shop_name` VARCHAR(256) NOT NULL DEFAULT '',
     `url` VARCHAR(768) NOT NULL,
+    `image` VARCHAR(768) NOT NULL DEFAULT '',
     `current_price` DOUBLE NOT NULL,
     `target_price` DOUBLE NOT NULL,
     `diff` DOUBLE NOT NULL DEFAULT 0,
-    `status` INTEGER NOT NULL DEFAULT 0,
-    `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-    `updated_at` DATETIME(3) NOT NULL,
+    `created_at` TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updated_at` TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
 
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -95,7 +98,7 @@ CREATE TABLE `monitor_items` (
 CREATE TABLE `roles` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
     `name` VARCHAR(20) NOT NULL,
-    `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `created_at` TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
 
     UNIQUE INDEX `roles_name_key`(`name`),
     PRIMARY KEY (`id`)
@@ -105,8 +108,8 @@ CREATE TABLE `roles` (
 CREATE TABLE `departments` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
     `name` VARCHAR(100) NOT NULL,
-    `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-    `updated_at` DATETIME(3) NOT NULL,
+    `created_at` TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updated_at` TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
 
     UNIQUE INDEX `departments_name_key`(`name`),
     PRIMARY KEY (`id`)
@@ -117,7 +120,7 @@ CREATE TABLE `menu_groups` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
     `name` VARCHAR(50) NOT NULL,
     `sort_order` INTEGER NOT NULL DEFAULT 0,
-    `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `created_at` TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
 
     UNIQUE INDEX `menu_groups_name_key`(`name`),
     PRIMARY KEY (`id`)
@@ -132,9 +135,29 @@ CREATE TABLE `menus` (
     `icon` VARCHAR(50) NOT NULL,
     `sort_order` INTEGER NOT NULL DEFAULT 0,
     `roles` JSON NOT NULL,
-    `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-    `updated_at` DATETIME(3) NOT NULL,
+    `created_at` TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updated_at` TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
 
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `history_price_queries` (
+    `id` INTEGER NOT NULL AUTO_INCREMENT,
+    `user_id` INTEGER NOT NULL,
+    `product_url` VARCHAR(512) NOT NULL,
+    `product_name` VARCHAR(512) NOT NULL,
+    `image_url` VARCHAR(512) NOT NULL DEFAULT '',
+    `platform` VARCHAR(32) NOT NULL,
+    `current_price` DOUBLE NOT NULL DEFAULT 0,
+    `lowest_price` DOUBLE NOT NULL DEFAULT 0,
+    `lowest_price_date` VARCHAR(24) NULL,
+    `price_list` JSON NOT NULL,
+    `raw_data` JSON NULL,
+    `created_at` TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updated_at` TIMESTAMP(3) NOT NULL,
+
+    UNIQUE INDEX `history_price_queries_user_id_product_url_key`(`user_id`, `product_url`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
@@ -161,3 +184,6 @@ ALTER TABLE `monitor_items` ADD CONSTRAINT `monitor_items_product_id_fkey` FOREI
 
 -- AddForeignKey
 ALTER TABLE `menus` ADD CONSTRAINT `menus_group_id_fkey` FOREIGN KEY (`group_id`) REFERENCES `menu_groups`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `history_price_queries` ADD CONSTRAINT `history_price_queries_user_id_fkey` FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;

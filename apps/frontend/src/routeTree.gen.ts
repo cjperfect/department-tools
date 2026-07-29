@@ -15,6 +15,7 @@ import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedUsersRouteImport } from './routes/_authenticated/users'
 import { Route as AuthenticatedMonitorRouteImport } from './routes/_authenticated/monitor'
 import { Route as AuthenticatedMenusRouteImport } from './routes/_authenticated/menus'
+import { Route as AuthenticatedHistoryPriceRouteImport } from './routes/_authenticated/history-price'
 import { Route as AuthenticatedDepartmentsRouteImport } from './routes/_authenticated/departments'
 import { Route as AuthenticatedBiddingRouteImport } from './routes/_authenticated/bidding'
 import { Route as errors503RouteImport } from './routes/(errors)/503'
@@ -54,6 +55,12 @@ const AuthenticatedMenusRoute = AuthenticatedMenusRouteImport.update({
   path: '/menus',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedHistoryPriceRoute =
+  AuthenticatedHistoryPriceRouteImport.update({
+    id: '/history-price',
+    path: '/history-price',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedDepartmentsRoute =
   AuthenticatedDepartmentsRouteImport.update({
     id: '/departments',
@@ -112,6 +119,7 @@ export interface FileRoutesByFullPath {
   '/503': typeof errors503Route
   '/bidding': typeof AuthenticatedBiddingRoute
   '/departments': typeof AuthenticatedDepartmentsRoute
+  '/history-price': typeof AuthenticatedHistoryPriceRoute
   '/menus': typeof AuthenticatedMenusRoute
   '/monitor': typeof AuthenticatedMonitorRoute
   '/users': typeof AuthenticatedUsersRoute
@@ -127,6 +135,7 @@ export interface FileRoutesByTo {
   '/503': typeof errors503Route
   '/bidding': typeof AuthenticatedBiddingRoute
   '/departments': typeof AuthenticatedDepartmentsRoute
+  '/history-price': typeof AuthenticatedHistoryPriceRoute
   '/menus': typeof AuthenticatedMenusRoute
   '/monitor': typeof AuthenticatedMonitorRoute
   '/users': typeof AuthenticatedUsersRoute
@@ -145,6 +154,7 @@ export interface FileRoutesById {
   '/(errors)/503': typeof errors503Route
   '/_authenticated/bidding': typeof AuthenticatedBiddingRoute
   '/_authenticated/departments': typeof AuthenticatedDepartmentsRoute
+  '/_authenticated/history-price': typeof AuthenticatedHistoryPriceRoute
   '/_authenticated/menus': typeof AuthenticatedMenusRoute
   '/_authenticated/monitor': typeof AuthenticatedMonitorRoute
   '/_authenticated/users': typeof AuthenticatedUsersRoute
@@ -164,6 +174,7 @@ export interface FileRouteTypes {
     | '/503'
     | '/bidding'
     | '/departments'
+    | '/history-price'
     | '/menus'
     | '/monitor'
     | '/users'
@@ -179,6 +190,7 @@ export interface FileRouteTypes {
     | '/503'
     | '/bidding'
     | '/departments'
+    | '/history-price'
     | '/menus'
     | '/monitor'
     | '/users'
@@ -196,6 +208,7 @@ export interface FileRouteTypes {
     | '/(errors)/503'
     | '/_authenticated/bidding'
     | '/_authenticated/departments'
+    | '/_authenticated/history-price'
     | '/_authenticated/menus'
     | '/_authenticated/monitor'
     | '/_authenticated/users'
@@ -256,6 +269,13 @@ declare module '@tanstack/react-router' {
       path: '/menus'
       fullPath: '/menus'
       preLoaderRoute: typeof AuthenticatedMenusRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/history-price': {
+      id: '/_authenticated/history-price'
+      path: '/history-price'
+      fullPath: '/history-price'
+      preLoaderRoute: typeof AuthenticatedHistoryPriceRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/departments': {
@@ -327,6 +347,7 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedBiddingRoute: typeof AuthenticatedBiddingRoute
   AuthenticatedDepartmentsRoute: typeof AuthenticatedDepartmentsRoute
+  AuthenticatedHistoryPriceRoute: typeof AuthenticatedHistoryPriceRoute
   AuthenticatedMenusRoute: typeof AuthenticatedMenusRoute
   AuthenticatedMonitorRoute: typeof AuthenticatedMonitorRoute
   AuthenticatedUsersRoute: typeof AuthenticatedUsersRoute
@@ -338,6 +359,7 @@ interface AuthenticatedRouteRouteChildren {
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedBiddingRoute: AuthenticatedBiddingRoute,
   AuthenticatedDepartmentsRoute: AuthenticatedDepartmentsRoute,
+  AuthenticatedHistoryPriceRoute: AuthenticatedHistoryPriceRoute,
   AuthenticatedMenusRoute: AuthenticatedMenusRoute,
   AuthenticatedMonitorRoute: AuthenticatedMonitorRoute,
   AuthenticatedUsersRoute: AuthenticatedUsersRoute,
