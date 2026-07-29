@@ -17,8 +17,8 @@ model User {
   must_change_password Boolean   @default(true)
   status              String    @default("active") @db.VarChar(20)
   is_delete           Boolean   @default(false)
-  created_at          DateTime  @default(now())
-  updated_at          DateTime  @updatedAt
+  created_at          DateTime  @default(dbgenerated("(CURRENT_TIMESTAMP(3))")) @db.DateTime(3)
+  updated_at          DateTime  @default(dbgenerated("(CURRENT_TIMESTAMP(3))")) @db.DateTime(3)
 
   department Department? @relation(fields: [department_id], references: [id])
   role       Role        @relation(fields: [role_id], references: [id])
@@ -45,8 +45,8 @@ model Analysis {
   highlights       Json?
   warnings         Json?
   gap_opportunities Json?
-  analyzed_at      DateTime @default(now())
-  created_at       DateTime @default(now())
+  analyzed_at      DateTime @default(dbgenerated("(CURRENT_TIMESTAMP(3))")) @db.DateTime(3)
+  created_at       DateTime @default(dbgenerated("(CURRENT_TIMESTAMP(3))")) @db.DateTime(3)
 
   user       User                @relation(fields: [user_id], references: [id])
   dimensions AnalysisDimension[]
@@ -61,7 +61,7 @@ model AnalysisDimension {
   dimension_type String   @db.VarChar(20)
   score          Float    @default(0)
   detail         Json     @default("{}")
-  created_at     DateTime @default(now())
+  created_at     DateTime @default(dbgenerated("(CURRENT_TIMESTAMP(3))")) @db.DateTime(3)
 
   analysis Analysis @relation(fields: [analysis_id], references: [id], onDelete: Cascade)
 
@@ -72,7 +72,7 @@ model RawData {
   id          Int      @id @default(autoincrement())
   analysis_id Int      @unique
   data        Json
-  created_at  DateTime @default(now())
+  created_at  DateTime @default(dbgenerated("(CURRENT_TIMESTAMP(3))")) @db.DateTime(3)
 
   analysis Analysis @relation(fields: [analysis_id], references: [id], onDelete: Cascade)
 
@@ -85,7 +85,7 @@ model MonitorProduct {
   keyword    String   @db.VarChar(512)
   image      String   @default("📦") @db.VarChar(768)
   configs    Json?
-  created_at DateTime @default(now())
+  created_at DateTime @default(dbgenerated("(CURRENT_TIMESTAMP(3))")) @db.DateTime(3)
 
   user  User          @relation(fields: [user_id], references: [id])
   items MonitorItem[]
@@ -104,8 +104,8 @@ model MonitorItem {
   current_price Float
   target_price  Float
   diff          Float    @default(0)
-  created_at    DateTime @default(now())
-  updated_at    DateTime @updatedAt
+  created_at    DateTime @default(dbgenerated("(CURRENT_TIMESTAMP(3))")) @db.DateTime(3)
+  updated_at    DateTime @default(dbgenerated("(CURRENT_TIMESTAMP(3))")) @db.DateTime(3)
 
   product MonitorProduct @relation(fields: [product_id], references: [id], onDelete: Cascade)
 
@@ -115,7 +115,7 @@ model MonitorItem {
 model Role {
   id         Int      @id @default(autoincrement())
   name       String   @unique @db.VarChar(20)
-  created_at DateTime @default(now())
+  created_at DateTime @default(dbgenerated("(CURRENT_TIMESTAMP(3))")) @db.DateTime(3)
 
   users User[]
 
@@ -125,8 +125,8 @@ model Role {
 model Department {
   id         Int      @id @default(autoincrement())
   name       String   @unique @db.VarChar(100)
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
+  created_at DateTime @default(dbgenerated("(CURRENT_TIMESTAMP(3))")) @db.DateTime(3)
+  updated_at DateTime @default(dbgenerated("(CURRENT_TIMESTAMP(3))")) @db.DateTime(3)
 
   users User[]
 
@@ -137,7 +137,7 @@ model MenuGroup {
   id         Int      @id @default(autoincrement())
   name       String   @unique @db.VarChar(50)
   sort_order Int      @default(0)
-  created_at DateTime @default(now())
+  created_at DateTime @default(dbgenerated("(CURRENT_TIMESTAMP(3))")) @db.DateTime(3)
 
   menus Menu[]
 
@@ -152,8 +152,8 @@ model Menu {
   icon       String   @db.VarChar(50)
   sort_order Int      @default(0)
   roles      Json     @default("[]")
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
+  created_at DateTime @default(dbgenerated("(CURRENT_TIMESTAMP(3))")) @db.DateTime(3)
+  updated_at DateTime @default(dbgenerated("(CURRENT_TIMESTAMP(3))")) @db.DateTime(3)
 
   group MenuGroup  @relation(fields: [group_id], references: [id])
 
