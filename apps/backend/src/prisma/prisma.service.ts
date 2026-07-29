@@ -27,25 +27,30 @@ function fixDateTimezone<T>(value: T): T {
   return value;
 }
 
-function createPrismaClientWithTzFix(): PrismaClient {
-  return new PrismaClient().$extends({
-    name: 'fix-timezone',
-    query: {
-      $allModels: {
-        // 修正所有模型操作的返回结果中的 Date 时区偏移
-        $allOperations({ args, query }) {
-          return (query(args) as Promise<unknown>).then(fixDateTimezone);
-        },
-      },
-    },
-  }) as unknown as PrismaClient;
-}
-
+/**
+ * PrismaService — 全局数据库服务
+ * 通过 $extends 修正 mysql2 驱动以 UTC 解析东八区 DATETIME 带来的 Date 偏移
+ */
 @Injectable()
 export class PrismaService
-  extends createPrismaClientWithTzFix()
+  extends PrismaClient
   implements OnModuleInit, OnModuleDestroy
 {
+  constructor() {
+    super();
+    // 返回扩展后的客户端实例，自动修正所有模型操作返回的 Date 时区偏移
+    return this.$extends({
+      name: 'fix-timezone',
+      query: {
+        $allModels: {
+          $allOperations({ args, query }) {
+            return (query(args) as Promise<unknown>).then(fixDateTimezone);
+          },
+        },
+      },
+    }) as this;
+  }
+
   async onModuleInit() {
     await this.$connect();
   }
