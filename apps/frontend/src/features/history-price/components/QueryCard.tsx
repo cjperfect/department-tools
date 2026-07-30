@@ -97,7 +97,7 @@ export function QueryCard({
                 ¥{lowestPrice.toFixed(2)}
               </span>
               <span className='text-muted-foreground'>
-                ({lowestPriceDate.slice(0, 10)})
+                ({lowestPriceDate?.slice(0, 10) || '-'})
               </span>
             </p>
             <p className='text-sm'>

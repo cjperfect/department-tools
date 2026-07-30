@@ -9,10 +9,12 @@ import { apiClient } from './client'
 
 /** 查询历史价格并保存 */
 export async function queryHistoryPrice(
-  productUrl: string
+  productUrl: string,
+  cookie?: string,
 ): Promise<HistoryPriceResponse> {
-  const { data } = await apiClient.get('/api/history-price/query', {
-    params: { productUrl },
+  const { data } = await apiClient.post('/api/history-price/query', {
+    productUrl,
+    cookie,
   })
   return data as HistoryPriceResponse
 }
@@ -25,9 +27,12 @@ export async function listHistoryPrice(): Promise<HistoryPriceQueryItem[]> {
 
 /** 刷新单个历史价格记录 */
 export async function refreshHistoryPrice(
-  id: number
+  id: number,
+  cookie?: string,
 ): Promise<HistoryPriceResponse> {
-  const { data } = await apiClient.post(`/api/history-price/refresh/${id}`)
+  const { data } = await apiClient.post(`/api/history-price/refresh/${id}`, {
+    cookie,
+  })
   return data as HistoryPriceResponse
 }
 

@@ -1,0 +1,21 @@
+{
+  "manifest_version": 3,
+  "name": "慢慢买 Cookie 助手",
+  "version": "1.0",
+  "description": "一键提取 tool.manmanbuy.com 的 Cookie，用于历史价格查询",
+  "permissions": ["cookies"],
+  "host_permissions": ["*://tool.manmanbuy.com/*"],
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icon16.png",
+      "48": "icon48.png",
+      "128": "icon128.png"
+    }
+  },
+  "icons": {
+    "16": "icon16.png",
+    "48": "icon48.png",
+    "128": "icon128.png"
+  }
+}

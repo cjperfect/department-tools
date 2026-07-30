@@ -3,7 +3,7 @@ import {
   Get,
   Post,
   Delete,
-  Query,
+  Body,
   Param,
   ParseIntPipe,
   UseGuards,
@@ -11,6 +11,7 @@ import {
   HttpStatus,
 } from '@nestjs/common'
 import { HistoryPriceService } from './history-price.service'
+import { QueryHistoryPriceDto } from './dto/query.dto'
 import { JwtAuthGuard } from '../common/guards/auth.guards'
 import { CurrentUser } from '../common/decorators/current-user.decorator'
 
@@ -20,17 +21,17 @@ export class HistoryPriceController {
   constructor(private readonly historyPriceService: HistoryPriceService) {}
 
   /** 查询历史价格并保存 */
-  @Get('query')
+  @Post('query')
   async query(
-    @Query('productUrl') productUrl: string,
+    @Body() body: QueryHistoryPriceDto,
     @CurrentUser() user: any
   ) {
-    if (!productUrl) {
+    if (!body.productUrl) {
       throw new HttpException('缺少 productUrl 参数', HttpStatus.BAD_REQUEST)
     }
 
     try {
-      return await this.historyPriceService.query({ productUrl }, user.id)
+      return await this.historyPriceService.query(body.productUrl, body.cookie, user.id)
     } catch (e) {
       throw new HttpException(
         `查询历史价格失败: ${e instanceof Error ? e.message : '未知错误'}`,
@@ -49,10 +50,11 @@ export class HistoryPriceController {
   @Post('refresh/:id')
   async refresh(
     @Param('id', ParseIntPipe) id: number,
+    @Body() body: { cookie?: string },
     @CurrentUser() user: any
   ) {
     try {
-      return await this.historyPriceService.refresh(id, user.id)
+      return await this.historyPriceService.refresh(id, user.id, body.cookie)
     } catch (e) {
       throw new HttpException(
         `刷新失败: ${e instanceof Error ? e.message : '未知错误'}`,

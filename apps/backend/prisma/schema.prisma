@@ -164,7 +164,7 @@ model Menu {
 model HistoryPriceQuery {
   id               Int      @id @default(autoincrement())
   user_id          Int
-  product_url      String   @db.VarChar(512)
+  product_url      String   @db.Text
   product_name     String   @db.VarChar(512)
   image_url        String   @default("") @db.VarChar(512)
   platform         String   @db.VarChar(32)
@@ -178,6 +178,5 @@ model HistoryPriceQuery {
 
   user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
-  @@unique([user_id, product_url])
   @@map("history_price_queries")
 }

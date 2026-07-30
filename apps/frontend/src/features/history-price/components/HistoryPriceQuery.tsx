@@ -16,6 +16,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ChartCard } from '@/components/ChartCard'
 import { ImageViewer } from '@/components/ImageViewer'
@@ -98,6 +99,9 @@ function ProductInfo({ data }: { data: HistoryPriceResponse }) {
 export function HistoryPriceQuery() {
   const queryClient = useQueryClient()
   const [urlInput, setUrlInput] = useState('')
+  const [cookieInput, setCookieInput] = useState(
+    () => localStorage.getItem('mmb_cookie') || ''
+  )
   const [selectedId, setSelectedId] = useState<number | null>(null)
   const [deleteId, setDeleteId] = useState<number | null>(null)
 
@@ -112,14 +116,14 @@ export function HistoryPriceQuery() {
   })
 
   const queryMutation = useMutation({
-    mutationFn: queryHistoryPrice,
+    mutationFn: (url: string) => queryHistoryPrice(url, cookieInput || undefined),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['history-price', 'list'] })
     },
   })
 
   const refreshMutation = useMutation({
-    mutationFn: refreshHistoryPrice,
+    mutationFn: (id: number) => refreshHistoryPrice(id, cookieInput || undefined),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['history-price', 'list'] })
     },
@@ -164,15 +168,30 @@ export function HistoryPriceQuery() {
         <div className='space-y-4'>
           {/* 查询输入区 */}
           <Card>
-            <CardContent className='p-4'>
-              <div className='flex gap-3'>
+            <CardContent className='p-4 space-y-3'>
+              <div className='flex items-center gap-3'>
+                <Label className='w-16 shrink-0 text-xs'>商品链接</Label>
                 <Input
-                  placeholder='请输入商品链接，如 https://item.jd.com/10429555538.html'
+                  placeholder='如 https://item.jd.com/10429555538.html'
                   value={urlInput}
                   onChange={(e) => setUrlInput(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && isValidUrl && handleQuery()}
                   className='flex-1'
                 />
+              </div>
+              <div className='flex items-center gap-3'>
+                <Label className='w-16 shrink-0 text-xs'>登录凭证</Label>
+                <Input
+                  placeholder='Chrome 扩展获取后粘贴'
+                  value={cookieInput}
+                  onChange={(e) => {
+                    setCookieInput(e.target.value)
+                    localStorage.setItem('mmb_cookie', e.target.value)
+                  }}
+                  className='flex-1 text-xs'
+                />
+              </div>
+              <div className='flex justify-end'>
                 <Button
                   onClick={handleQuery}
                   disabled={!isValidUrl || queryMutation.isPending}
@@ -182,7 +201,7 @@ export function HistoryPriceQuery() {
                   ) : (
                     <Search className='mr-2 size-4' />
                   )}
-                  历史价格查询
+                  查询
                 </Button>
               </div>
             </CardContent>
