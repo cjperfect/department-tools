@@ -33,7 +33,7 @@ export class MenusService {
       this.prisma.menu.count({ where }),
     ]);
 
-    return { code: 0, message: 'ok', data: { items, total, page, pageSize } };
+    return { items, total, page, pageSize };
   }
 
   async create(data: {
@@ -51,7 +51,7 @@ export class MenusService {
       },
       include: { group: true },
     });
-    return { code: 0, message: '创建成功', data: menu };
+    return menu
   }
 
   async update(id: number, data: {
@@ -67,7 +67,7 @@ export class MenusService {
         },
         include: { group: true },
       });
-      return { code: 0, message: '更新成功', data: menu };
+      return menu
     } catch {
       throw new NotFoundException('菜单项不存在');
     }
@@ -76,7 +76,7 @@ export class MenusService {
   async delete(id: number) {
     try {
       await this.prisma.menu.delete({ where: { id } });
-      return { code: 0, message: '删除成功', data: null };
+      return
     } catch {
       throw new NotFoundException('菜单项不存在');
     }
@@ -88,7 +88,7 @@ export class MenusService {
     const items = await this.prisma.menuGroup.findMany({
       orderBy: { sort_order: 'asc' },
     });
-    return { code: 0, message: 'ok', data: { items } };
+    return { items }
   }
 
   async createGroup(data: { name: string; sort_order?: number }) {
@@ -97,7 +97,7 @@ export class MenusService {
     const group = await this.prisma.menuGroup.create({
       data: { name: data.name, sort_order: data.sort_order ?? 0 },
     });
-    return { code: 0, message: '创建成功', data: group };
+    return group
   }
 
   async updateGroup(id: number, data: { name?: string; sort_order?: number }) {
@@ -109,7 +109,7 @@ export class MenusService {
     }
     try {
       const group = await this.prisma.menuGroup.update({ where: { id }, data });
-      return { code: 0, message: '更新成功', data: group };
+      return group
     } catch {
       throw new NotFoundException('分组不存在');
     }
@@ -120,7 +120,7 @@ export class MenusService {
     if (count > 0) throw new BadRequestException('该分组下还有菜单项，无法删除');
     try {
       await this.prisma.menuGroup.delete({ where: { id } });
-      return { code: 0, message: '删除成功', data: null };
+      return
     } catch {
       throw new NotFoundException('分组不存在');
     }

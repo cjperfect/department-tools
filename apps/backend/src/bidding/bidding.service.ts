@@ -36,8 +36,8 @@ export class BiddingService {
 
   async analyze(url: string, userId: number) {
     const parsed = parseProductUrl(url);
-    if (!parsed) return { code: 0, message: '未找到该商品', data: null };
-    if (!parsed.isSupported) return { code: 0, message: '未找到该商品', data: null };
+    if (!parsed) return null;
+    if (!parsed.isSupported) return null;
 
     const analysis = await this.prisma.analysis.create({
       data: {
@@ -76,7 +76,7 @@ export class BiddingService {
       data: { analysis_id: analysis.id, data: {} },
     });
 
-    return { code: 0, message: '分析完成', data: await this.loadAnalysis(analysis.id) };
+    return await this.loadAnalysis(analysis.id);
   }
 
   async getRecords(userId: number, query?: string) {
@@ -94,11 +94,7 @@ export class BiddingService {
       include: { dimensions: true },
       orderBy: { created_at: 'desc' },
     });
-    return {
-      code: 0,
-      message: 'ok',
-      data: { records: records.map((r) => this.toDict(r)), total: records.length },
-    };
+    return { records: records.map((r) => this.toDict(r)), total: records.length };
   }
 
   async deleteRecord(userId: number, recordId: number) {
@@ -107,7 +103,7 @@ export class BiddingService {
     });
     if (!record) throw new NotFoundException('记录不存在');
     await this.prisma.analysis.delete({ where: { id: recordId } });
-    return { code: 0, message: '已删除', data: null };
+    return;
   }
 
   // ------------------------------------------------------------------

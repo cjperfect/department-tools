@@ -73,8 +73,6 @@ function extractTicket(html: string): string | null {
     ticket = ticket.slice(-4) + ticket.slice(0, -4)
   }
 
-  console.log('ticket', ticket)
-
   return ticket
 }
 

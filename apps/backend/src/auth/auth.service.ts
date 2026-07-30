@@ -82,10 +82,10 @@ export class AuthService {
       include: USER_INCLUDE,
     });
     if (!user || !bcrypt.compareSync(password, user.password_hash)) {
-      return { code: 401, message: '用户名或密码错误' };
+      throw new UnauthorizedException('用户名或密码错误');
     }
     if (user.status !== 'active') {
-      return { code: 401, message: '账号已被禁用，请联系管理员' };
+      throw new UnauthorizedException('账号已被禁用，请联系管理员');
     }
     const token = this.jwtService.sign({
       sub: String(user.id),
@@ -94,20 +94,16 @@ export class AuthService {
     });
     const { password_hash, role: _role, ...rest } = user;
     return {
-      code: 0,
-      message: 'ok',
-      data: {
-        token,
-        user: { ...rest, role: user.role.name },
-        mustChangePassword: user.must_change_password,
-      },
+      token,
+      user: { ...rest, role: user.role.name },
+      mustChangePassword: user.must_change_password,
     };
   }
 
   async changePassword(userId: number, oldPassword: string, newPassword: string) {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user || !bcrypt.compareSync(oldPassword, user.password_hash)) {
-      return { code: 400, message: '原密码错误' };
+      throw new BadRequestException('原密码错误');
     }
     await this.prisma.user.update({
       where: { id: userId },
@@ -116,12 +112,12 @@ export class AuthService {
         must_change_password: false,
       },
     });
-    return { code: 0, message: '密码已修改', data: null };
+    return;
   }
 
   async getMenu(role: string) {
     const navGroups = await buildMenu(this.prisma, role);
-    return { code: 0, message: 'ok', data: { navGroups } };
+    return { navGroups };
   }
 
   // ------------------------------------------------------------------
@@ -151,14 +147,10 @@ export class AuthService {
     ]);
 
     return {
-      code: 0,
-      message: 'ok',
-      data: {
-        items: items.map(mapRole),
-        total,
-        page,
-        pageSize,
-      },
+      items: items.map(mapRole),
+      total,
+      page,
+      pageSize,
     };
   }
 
@@ -211,11 +203,7 @@ export class AuthService {
       });
 
       const { password_hash, role: _role, ...result } = user;
-      return {
-        code: 0,
-        message: '用户已创建',
-        data: { ...result, role: user.role.name, rawPassword },
-      };
+      return { ...result, role: user.role.name, rawPassword };
     } catch (e) {
       if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') {
         const target = (e.meta?.target as string[]) || [];
@@ -280,7 +268,7 @@ export class AuthService {
     });
 
     const { password_hash, role: _role, ...result } = updated;
-    return { code: 0, message: '用户已更新', data: { ...result, role: updated.role.name } };
+    return { ...result, role: updated.role.name };
   }
 
   async deleteUser(adminUser: { id: number; role: string }, userId: number) {
@@ -309,7 +297,7 @@ export class AuthService {
       data: { is_delete: true },
     });
 
-    return { code: 0, message: '用户已删除', data: null };
+    return;
   }
 
   async resetPassword(
@@ -342,7 +330,7 @@ export class AuthService {
       },
     });
 
-    return { code: 0, message: '密码已重置', data: { rawPassword } };
+    return { rawPassword };
   }
 
   async getUserById(userId: number) {
@@ -352,7 +340,7 @@ export class AuthService {
     });
     if (!user) throw new NotFoundException('用户不存在');
     const { password_hash, role: _role, ...result } = user;
-    return { code: 0, message: 'ok', data: { ...result, role: user.role.name } };
+    return { ...result, role: user.role.name };
   }
 
   async getUser(userId: number) {

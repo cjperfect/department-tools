@@ -13,46 +13,37 @@ export class DepartmentsService {
     const items = await this.prisma.department.findMany({
       orderBy: { created_at: 'desc' },
     });
-    return { code: 0, message: 'ok', data: { items } };
+    return { items }
   }
 
   async create(name: string) {
     const existing = await this.prisma.department.findUnique({
       where: { name },
-    });
+    })
     if (existing) {
-      throw new BadRequestException(`部门「${name}」已存在`);
+      throw new BadRequestException(`部门「${name}」已存在`)
     }
-    const department = await this.prisma.department.create({
-      data: { name },
-    });
-    return { code: 0, message: '创建成功', data: department };
+    return this.prisma.department.create({ data: { name } })
   }
 
   async update(id: number, name: string) {
     const existing = await this.prisma.department.findUnique({
       where: { name },
-    });
+    })
     if (existing && existing.id !== id) {
-      throw new BadRequestException(`部门「${name}」已存在`);
+      throw new BadRequestException(`部门「${name}」已存在`)
     }
-    try {
-      const department = await this.prisma.department.update({
-        where: { id },
-        data: { name },
-      });
-      return { code: 0, message: '更新成功', data: department };
-    } catch {
-      throw new NotFoundException('部门不存在');
-    }
+    return this.prisma.department.update({
+      where: { id },
+      data: { name },
+    }).catch(() => {
+      throw new NotFoundException('部门不存在')
+    })
   }
 
   async delete(id: number) {
-    try {
-      await this.prisma.department.delete({ where: { id } });
-      return { code: 0, message: '删除成功', data: null };
-    } catch {
-      throw new NotFoundException('部门不存在');
-    }
+    await this.prisma.department.delete({ where: { id } }).catch(() => {
+      throw new NotFoundException('部门不存在')
+    })
   }
 }
