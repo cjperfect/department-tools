@@ -2,21 +2,38 @@ import { useEffect, useState } from 'react'
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import {
-  Dialog, DialogContent, DialogDescription, DialogFooter,
-  DialogHeader, DialogTitle,
-} from '@/components/ui/dialog'
-import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel,
-  AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
-  AlertDialogHeader, AlertDialogTitle,
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { useMenus } from './menus-provider'
 import { createMenu, updateMenu, deleteMenuAPI, fetchGroups } from '../api'
+import { useMenus } from './menus-provider'
 
-const ICONS = ['LayoutDashboard', 'BarChart3', 'Eye', 'Users', 'Building2', 'Settings']
+const ICONS = [
+  'LayoutDashboard',
+  'BarChart3',
+  'Eye',
+  'History',
+  'Users',
+  'Building2',
+  'Settings',
+]
 
 const ROLE_OPTIONS = [
   { value: 'super_admin', label: '超级管理员' },
@@ -25,7 +42,14 @@ const ROLE_OPTIONS = [
 ]
 
 export function MenusDialogs() {
-  const { open, setOpen, currentRow, setCurrentRow, deleteOpen, setDeleteOpen } = useMenus()
+  const {
+    open,
+    setOpen,
+    currentRow,
+    setCurrentRow,
+    deleteOpen,
+    setDeleteOpen,
+  } = useMenus()
   const queryClient = useQueryClient()
 
   const { data: groups = [] } = useQuery({
@@ -45,7 +69,13 @@ export function MenusDialogs() {
     setTitle(row?.title || '')
     setUrl(row?.url || '')
     setIcon(row?.icon || 'LayoutDashboard')
-    setGroupId(row?.group_id ? String(row.group_id) : (groups[0]?.id ? String(groups[0].id) : ''))
+    setGroupId(
+      row?.group_id
+        ? String(row.group_id)
+        : groups[0]?.id
+          ? String(groups[0].id)
+          : ''
+    )
     setSelectedRoles(row?.roles || [])
     setSortOrder(String(row?.sort_order ?? '0'))
     setErrors({})
@@ -71,7 +101,15 @@ export function MenusDialogs() {
   }
 
   const createMutation = useMutation({
-    mutationFn: () => createMenu({ title, url, icon, group_id: Number(groupId), roles: selectedRoles, sort_order: Number(sortOrder) }),
+    mutationFn: () =>
+      createMenu({
+        title,
+        url,
+        icon,
+        group_id: Number(groupId),
+        roles: selectedRoles,
+        sort_order: Number(sortOrder),
+      }),
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ['menus'] })
       toast.success(data?._msg || '操作成功')
@@ -81,7 +119,15 @@ export function MenusDialogs() {
   })
 
   const updateMutation = useMutation({
-    mutationFn: () => updateMenu(currentRow!.id, { title, url, icon, group_id: Number(groupId), roles: selectedRoles, sort_order: Number(sortOrder) }),
+    mutationFn: () =>
+      updateMenu(currentRow!.id, {
+        title,
+        url,
+        icon,
+        group_id: Number(groupId),
+        roles: selectedRoles,
+        sort_order: Number(sortOrder),
+      }),
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ['menus'] })
       toast.success(data?._msg || '操作成功')
@@ -109,7 +155,13 @@ export function MenusDialogs() {
 
   return (
     <>
-      <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) reset() }}>
+      <Dialog
+        open={open}
+        onOpenChange={(v) => {
+          setOpen(v)
+          if (!v) reset()
+        }}
+      >
         <DialogContent className='sm:max-w-md'>
           <DialogHeader>
             <DialogTitle>{currentRow ? '编辑菜单' : '新增菜单'}</DialogTitle>
@@ -118,34 +170,67 @@ export function MenusDialogs() {
           <div className='space-y-3'>
             <div>
               <Label>名称</Label>
-              <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder='首页' />
-              {errors.title && <p className='text-sm text-destructive'>{errors.title}</p>}
+              <Input
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder='首页'
+              />
+              {errors.title && (
+                <p className='text-destructive text-sm'>{errors.title}</p>
+              )}
             </div>
             <div>
               <Label>路径</Label>
-              <Input value={url} onChange={(e) => setUrl(e.target.value)} placeholder='/' />
-              {errors.url && <p className='text-sm text-destructive'>{errors.url}</p>}
+              <Input
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
+                placeholder='/'
+              />
+              {errors.url && (
+                <p className='text-destructive text-sm'>{errors.url}</p>
+              )}
             </div>
             <div className='grid grid-cols-2 gap-3'>
               <div>
                 <Label>图标</Label>
-                <select className='flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm' value={icon} onChange={(e) => setIcon(e.target.value)}>
-                  {ICONS.map((i) => <option key={i} value={i}>{i}</option>)}
+                <select
+                  className='border-input bg-background flex h-9 w-full rounded-md border px-3 py-1 text-sm'
+                  value={icon}
+                  onChange={(e) => setIcon(e.target.value)}
+                >
+                  {ICONS.map((i) => (
+                    <option key={i} value={i}>
+                      {i}
+                    </option>
+                  ))}
                 </select>
               </div>
               <div>
                 <Label>分组</Label>
-                <select className='flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm' value={groupId} onChange={(e) => setGroupId(e.target.value)}>
-                  {groups.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
+                <select
+                  className='border-input bg-background flex h-9 w-full rounded-md border px-3 py-1 text-sm'
+                  value={groupId}
+                  onChange={(e) => setGroupId(e.target.value)}
+                >
+                  {groups.map((g) => (
+                    <option key={g.id} value={g.id}>
+                      {g.name}
+                    </option>
+                  ))}
                 </select>
-                {errors.groupId && <p className='text-sm text-destructive'>{errors.groupId}</p>}
+                {errors.groupId && (
+                  <p className='text-destructive text-sm'>{errors.groupId}</p>
+                )}
               </div>
             </div>
             <div>
               <Label>角色限制（不选 = 所有人可见）</Label>
-              <div className='flex flex-wrap gap-3 mt-1'>
+              <div className='mt-1 flex flex-wrap gap-3'>
                 {ROLE_OPTIONS.map((r) => (
-                  <label key={r.value} className='flex items-center gap-1.5 text-sm'>
+                  <label
+                    key={r.value}
+                    className='flex items-center gap-1.5 text-sm'
+                  >
                     <input
                       type='checkbox'
                       checked={selectedRoles.includes(r.value)}
@@ -158,12 +243,21 @@ export function MenusDialogs() {
             </div>
             <div>
               <Label>排序</Label>
-              <Input type='number' value={sortOrder} onChange={(e) => setSortOrder(e.target.value)} />
+              <Input
+                type='number'
+                value={sortOrder}
+                onChange={(e) => setSortOrder(e.target.value)}
+              />
             </div>
           </div>
           <DialogFooter>
-            <Button onClick={handleSubmit} disabled={createMutation.isPending || updateMutation.isPending}>
-              {createMutation.isPending || updateMutation.isPending ? '保存中...' : '保存'}
+            <Button
+              onClick={handleSubmit}
+              disabled={createMutation.isPending || updateMutation.isPending}
+            >
+              {createMutation.isPending || updateMutation.isPending
+                ? '保存中...'
+                : '保存'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -173,11 +267,18 @@ export function MenusDialogs() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>确认删除</AlertDialogTitle>
-            <AlertDialogDescription>确定要删除菜单「{currentRow?.title}」吗？</AlertDialogDescription>
+            <AlertDialogDescription>
+              确定要删除菜单「{currentRow?.title}」吗？
+            </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>取消</AlertDialogCancel>
-            <AlertDialogAction disabled={deleteMutation.isPending} onClick={() => { if (currentRow) deleteMutation.mutate(currentRow.id) }}>
+            <AlertDialogAction
+              disabled={deleteMutation.isPending}
+              onClick={() => {
+                if (currentRow) deleteMutation.mutate(currentRow.id)
+              }}
+            >
               {deleteMutation.isPending ? '删除中...' : '确认删除'}
             </AlertDialogAction>
           </AlertDialogFooter>
