@@ -12,7 +12,7 @@
     "@trivago/prettier-plugin-sort-imports",
     "prettier-plugin-tailwindcss"
   ],
-  "importOrderParserPlugins": ["typescript", "decorators-legacy"],
+  "importOrderParserPlugins": ["typescript", "jsx", "decorators-legacy"],
   "tailwindFunctions": ["cn", "clsx"],
   "importOrder": [
     "^path$",

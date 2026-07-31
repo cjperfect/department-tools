@@ -1,15 +1,16 @@
-import { apiClient } from '@/api/client'
 import type { NavGroup as ApiNavGroup } from '@department-tools/types/auth'
-import type { NavGroup, NavItem } from '@/components/layout/types'
 import {
   LayoutDashboard,
   BarChart3,
   Eye,
+  History,
   Users,
   Building2,
   Settings,
   type LucideIcon,
 } from 'lucide-react'
+import { apiClient } from '@/api/client'
+import type { NavGroup, NavItem } from '@/components/layout/types'
 
 export type { NavGroup }
 
@@ -17,6 +18,7 @@ const iconMap: Record<string, LucideIcon> = {
   LayoutDashboard,
   BarChart3,
   Eye,
+  History,
   Users,
   Building2,
   Settings,
@@ -48,6 +50,8 @@ export function transformMenus(rawGroups: ApiNavGroup[]): NavGroup[] {
 }
 
 export async function fetchMenus(): Promise<ApiNavGroup[]> {
-  const { data } = await apiClient.get<{ navGroups: ApiNavGroup[] }>('/api/auth/menu')
+  const { data } = await apiClient.get<{ navGroups: ApiNavGroup[] }>(
+    '/api/auth/menu'
+  )
   return data.navGroups
 }
