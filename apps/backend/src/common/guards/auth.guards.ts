@@ -3,11 +3,11 @@ import {
   CanActivate,
   ExecutionContext,
   UnauthorizedException,
-} from '@nestjs/common';
-import { AuthGuard } from '@nestjs/passport';
-import { Reflector } from '@nestjs/core';
-import { ROLES_KEY } from '../decorators/roles.decorator';
-import { getRoleLevel } from '../constants';
+} from '@nestjs/common'
+import { Reflector } from '@nestjs/core'
+import { AuthGuard } from '@nestjs/passport'
+import { getRoleLevel } from '../constants'
+import { ROLES_KEY } from '../decorators/roles.decorator'
 
 /** JWT 认证守卫 — 使用 Passport JWT strategy 验证 token。 */
 @Injectable()
@@ -19,19 +19,19 @@ export class RolesGuard implements CanActivate {
   constructor(private reflector: Reflector) {}
 
   canActivate(context: ExecutionContext): boolean {
-    const requiredRoles = this.reflector.getAllAndOverride<string[]>(ROLES_KEY, [
-      context.getHandler(),
-      context.getClass(),
-    ]);
+    const requiredRoles = this.reflector.getAllAndOverride<string[]>(
+      ROLES_KEY,
+      [context.getHandler(), context.getClass()]
+    )
     if (!requiredRoles || requiredRoles.length === 0) {
-      return true;
+      return true
     }
-    const { user } = context.switchToHttp().getRequest();
+    const { user } = context.switchToHttp().getRequest()
     if (!user) {
-      throw new UnauthorizedException('请先登录');
+      throw new UnauthorizedException('请先登录')
     }
-    const userLevel = getRoleLevel(user.role);
-    const requiredLevel = Math.min(...requiredRoles.map(getRoleLevel));
-    return userLevel >= requiredLevel;
+    const userLevel = getRoleLevel(user.role)
+    const requiredLevel = Math.min(...requiredRoles.map(getRoleLevel))
+    return userLevel >= requiredLevel
   }
 }
